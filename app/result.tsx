@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,34 +13,45 @@ export default function ResultScreen() {
     echoScore?: string;
     snapScore?: string;
     lockScore?: string;
+    duelId?: string;
   }>();
+  
   const score = parseInt(params.score || '0', 10);
   const echoScore = params.echoScore ? parseInt(params.echoScore, 10) : null;
   const snapScore = params.snapScore ? parseInt(params.snapScore, 10) : null;
   const lockScore = params.lockScore ? parseInt(params.lockScore, 10) : null;
+  const duelId = params.duelId || '';
   
   const { submitScore, bestScore, streak, checkCanPlay, isPro } = useGameState();
   const [newStreak, setNewStreak] = useState(streak);
+  const [newBestScore, setNewBestScore] = useState(bestScore);
   const [isNewBest, setIsNewBest] = useState(false);
   const [canPlayMore, setCanPlayMore] = useState(false);
-  const hasSubmittedRef = useRef(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
+    if (hasSubmitted || !duelId) return;
+    
     const saveResult = async () => {
-      if (hasSubmittedRef.current) return;
-      hasSubmittedRef.current = true;
+      setHasSubmitted(true);
       
-      const result = await submitScore(score);
-      if (!result.alreadySubmitted) {
-        setNewStreak(result.streak);
-        setIsNewBest(score > bestScore);
+      const result = await submitScore(score, duelId);
+      
+      if (!result.wasAlreadySubmitted) {
+        setNewStreak(result.newStreak);
+        setNewBestScore(result.newBestScore);
+        setIsNewBest(score > bestScore && score === result.newBestScore);
+      } else {
+        setNewStreak(result.newStreak);
+        setNewBestScore(result.newBestScore);
       }
       
       const canPlay = await checkCanPlay();
       setCanPlayMore(canPlay);
     };
+    
     saveResult();
-  }, []);
+  }, [duelId]);
 
   const handleGoHome = () => {
     router.replace('/home');
@@ -77,7 +88,7 @@ export default function ResultScreen() {
         <View style={styles.stats}>
           <StatCard label="Streak" value={`${newStreak} days`} variant="highlight" />
           <View style={styles.statGap} />
-          <StatCard label="Best" value={bestScore.toLocaleString()} />
+          <StatCard label="Best" value={newBestScore.toLocaleString()} />
         </View>
 
         <View style={styles.breakdown}>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, typography, spacing } from '../../src/constants/theme';
+import { generateDuelId } from '../../src/utils/storage';
 
 const ROUNDS = [
   { id: 'echo', name: 'ECHO', description: 'Memory Round', icon: '🧠' },
@@ -12,15 +13,19 @@ const ROUNDS = [
 
 export default function GameStartScreen() {
   const [countdown, setCountdown] = useState(3);
+  const [duelId] = useState(() => generateDuelId());
 
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else {
-      router.replace('/game/echo');
+      router.replace({
+        pathname: '/game/echo',
+        params: { duelId, totalScore: '0' },
+      });
     }
-  }, [countdown]);
+  }, [countdown, duelId]);
 
   return (
     <SafeAreaView style={styles.container}>

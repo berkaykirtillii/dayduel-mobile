@@ -31,9 +31,11 @@ export default function SnapRoundScreen() {
   const params = useLocalSearchParams<{
     totalScore?: string;
     echoScore?: string;
+    duelId?: string;
   }>();
   const previousScore = parseInt(params.totalScore || '0', 10);
   const echoScore = params.echoScore || '0';
+  const duelId = params.duelId || '';
   
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(2);
   const [config, setConfig] = useState(SNAP_CONFIGS[2]);
@@ -166,12 +168,13 @@ export default function SnapRoundScreen() {
     router.replace({
       pathname: '/game/lock',
       params: {
+        duelId,
         totalScore: newTotalScore.toString(),
         echoScore,
         snapScore: score.toString(),
       },
     });
-  }, [previousScore, score, echoScore]);
+  }, [previousScore, score, echoScore, duelId]);
 
   const accuracy = hits + misses > 0 ? Math.round((hits / (hits + misses)) * 100) : 100;
 

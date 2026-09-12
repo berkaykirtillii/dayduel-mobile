@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   GameState,
   getGameState,
-  updateStreakAndSaveScore,
+  submitDuelScore,
   canPlayFreeDuel,
   setOnboardingComplete as setOnboardingCompleteStorage,
   setProStatus as setProStatusStorage,
+  generateDuelId,
 } from '../utils/storage';
 
 export function useGameState() {
@@ -19,7 +20,6 @@ export function useGameState() {
     duelsToday: 0,
   });
   const [loading, setLoading] = useState(true);
-  const submittingRef = useRef(false);
 
   const loadState = useCallback(async () => {
     const gameState = await getGameState();
@@ -31,15 +31,10 @@ export function useGameState() {
     loadState();
   }, [loadState]);
 
-  const submitScore = useCallback(async (score: number) => {
-    if (submittingRef.current) {
-      return { score: state.todayScore, streak: state.streak, alreadySubmitted: true };
-    }
-    submittingRef.current = true;
-    
-    try {
-      const result = await updateStreakAndSaveScore(score);
-      
+  const submitScore = useCallback(async (score: number, duelId: string) => {
+    const result = await submitDuelScore(score, duelId);
+
+    if (!result.wasAlreadySubmitted) {
       setState(prev => ({
         ...prev,
         todayScore: score,
@@ -48,16 +43,13 @@ export function useGameState() {
         lastPlayed: new Date().toDateString(),
         duelsToday: result.duelsToday,
       }));
-      
-      return { score, streak: result.newStreak, alreadySubmitted: false };
-    } finally {
-      submittingRef.current = false;
     }
-  }, [state.todayScore, state.streak]);
+
+    return result;
+  }, []);
 
   const checkCanPlay = useCallback(async () => {
-    const freshState = await getGameState();
-    return freshState.isPro || freshState.duelsToday < 1;
+    return canPlayFreeDuel();
   }, []);
 
   const completeOnboarding = useCallback(async () => {
@@ -78,5 +70,6 @@ export function useGameState() {
     completeOnboarding,
     upgradeToPro,
     refresh: loadState,
+    generateDuelId,
   };
 }

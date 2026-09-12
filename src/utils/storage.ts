@@ -2,11 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEYS = {
   SCORE: '@dayduel/today_score',
+  BEST_SCORE: '@dayduel/best_score',
   STREAK: '@dayduel/streak',
   LAST_PLAYED: '@dayduel/last_played',
   ONBOARDING_COMPLETE: '@dayduel/onboarding_complete',
   IS_PRO: '@dayduel/is_pro',
   DUELS_TODAY: '@dayduel/duels_today',
+  LAST_DUEL_ID: '@dayduel/last_duel_id',
 } as const;
 
 export interface GameState {
@@ -29,6 +31,16 @@ const DEFAULT_STATE: GameState = {
   duelsToday: 0,
 };
 
+function getTodayString(): string {
+  return new Date().toDateString();
+}
+
+function getYesterdayString(): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toDateString();
+}
+
 export async function getGameState(): Promise<GameState> {
   try {
     const [
@@ -42,21 +54,21 @@ export async function getGameState(): Promise<GameState> {
     ] = await Promise.all([
       AsyncStorage.getItem(STORAGE_KEYS.SCORE),
       AsyncStorage.getItem(STORAGE_KEYS.STREAK),
-      AsyncStorage.getItem('@dayduel/best_score'),
+      AsyncStorage.getItem(STORAGE_KEYS.BEST_SCORE),
       AsyncStorage.getItem(STORAGE_KEYS.LAST_PLAYED),
       AsyncStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETE),
       AsyncStorage.getItem(STORAGE_KEYS.IS_PRO),
       AsyncStorage.getItem(STORAGE_KEYS.DUELS_TODAY),
     ]);
 
-    const today = new Date().toDateString();
+    const today = getTodayString();
     const isNewDay = lastPlayed !== today;
 
     return {
       todayScore: isNewDay ? 0 : parseInt(todayScore || '0', 10),
       streak: parseInt(streak || '0', 10),
       bestScore: parseInt(bestScore || '0', 10),
-      lastPlayed: lastPlayed,
+      lastPlayed,
       onboardingComplete: onboardingComplete === 'true',
       isPro: isPro === 'true',
       duelsToday: isNewDay ? 0 : parseInt(duelsToday || '0', 10),
@@ -67,15 +79,32 @@ export async function getGameState(): Promise<GameState> {
   }
 }
 
-export async function updateStreakAndSaveScore(score: number): Promise<{
+export interface SubmitScoreResult {
   newStreak: number;
   newBestScore: number;
   duelsToday: number;
-}> {
+  wasAlreadySubmitted: boolean;
+}
+
+export async function submitDuelScore(
+  score: number,
+  duelId: string
+): Promise<SubmitScoreResult> {
   try {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    
+    const lastDuelId = await AsyncStorage.getItem(STORAGE_KEYS.LAST_DUEL_ID);
+    if (lastDuelId === duelId) {
+      const state = await getGameState();
+      return {
+        newStreak: state.streak,
+        newBestScore: state.bestScore,
+        duelsToday: state.duelsToday,
+        wasAlreadySubmitted: true,
+      };
+    }
+
+    const today = getTodayString();
+    const yesterday = getYesterdayString();
+
     const [
       storedStreak,
       storedBestScore,
@@ -83,61 +112,44 @@ export async function updateStreakAndSaveScore(score: number): Promise<{
       storedDuelsToday,
     ] = await Promise.all([
       AsyncStorage.getItem(STORAGE_KEYS.STREAK),
-      AsyncStorage.getItem('@dayduel/best_score'),
+      AsyncStorage.getItem(STORAGE_KEYS.BEST_SCORE),
       AsyncStorage.getItem(STORAGE_KEYS.LAST_PLAYED),
       AsyncStorage.getItem(STORAGE_KEYS.DUELS_TODAY),
     ]);
-    
+
     const currentStreak = parseInt(storedStreak || '0', 10);
     const currentBestScore = parseInt(storedBestScore || '0', 10);
     const isNewDay = storedLastPlayed !== today;
     const currentDuelsToday = isNewDay ? 0 : parseInt(storedDuelsToday || '0', 10);
+
+    let newStreak: number;
     
-    let newStreak = currentStreak;
-    if (storedLastPlayed === yesterday) {
-      newStreak = currentStreak + 1;
-    } else if (storedLastPlayed !== today && storedLastPlayed !== null) {
+    if (storedLastPlayed === null) {
       newStreak = 1;
-    } else if (storedLastPlayed === null) {
+    } else if (storedLastPlayed === today) {
+      newStreak = currentStreak;
+    } else if (storedLastPlayed === yesterday) {
+      newStreak = currentStreak + 1;
+    } else {
       newStreak = 1;
     }
-    
+
     const newBestScore = Math.max(currentBestScore, score);
     const newDuelsToday = currentDuelsToday + 1;
-    
+
     await Promise.all([
       AsyncStorage.setItem(STORAGE_KEYS.SCORE, score.toString()),
       AsyncStorage.setItem(STORAGE_KEYS.STREAK, newStreak.toString()),
       AsyncStorage.setItem(STORAGE_KEYS.LAST_PLAYED, today),
-      AsyncStorage.setItem('@dayduel/best_score', newBestScore.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.BEST_SCORE, newBestScore.toString()),
       AsyncStorage.setItem(STORAGE_KEYS.DUELS_TODAY, newDuelsToday.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.LAST_DUEL_ID, duelId),
     ]);
-    
-    return { newStreak, newBestScore, duelsToday: newDuelsToday };
+
+    return { newStreak, newBestScore, duelsToday: newDuelsToday, wasAlreadySubmitted: false };
   } catch (error) {
-    console.error('Error saving score and streak:', error);
-    return { newStreak: 1, newBestScore: score, duelsToday: 1 };
-  }
-}
-
-export async function saveScore(score: number): Promise<void> {
-  await updateStreakAndSaveScore(score);
-}
-
-export async function updateStreak(): Promise<number> {
-  const result = await updateStreakAndSaveScore(0);
-  return result.newStreak;
-}
-
-export async function incrementDuelsToday(): Promise<number> {
-  try {
-    const currentState = await getGameState();
-    const newCount = currentState.duelsToday + 1;
-    await AsyncStorage.setItem(STORAGE_KEYS.DUELS_TODAY, newCount.toString());
-    return newCount;
-  } catch (error) {
-    console.error('Error incrementing duels:', error);
-    return 1;
+    console.error('Error submitting duel score:', error);
+    return { newStreak: 1, newBestScore: score, duelsToday: 1, wasAlreadySubmitted: false };
   }
 }
 
@@ -166,8 +178,11 @@ export async function resetGameState(): Promise<void> {
   try {
     const keys = Object.values(STORAGE_KEYS);
     await Promise.all(keys.map(key => AsyncStorage.removeItem(key)));
-    await AsyncStorage.removeItem('@dayduel/best_score');
   } catch (error) {
     console.error('Error resetting game state:', error);
   }
+}
+
+export function generateDuelId(): string {
+  return `duel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }

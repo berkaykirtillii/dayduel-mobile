@@ -18,8 +18,9 @@ const { width } = Dimensions.get('window');
 type GamePhase = 'showing' | 'input' | 'feedback' | 'next';
 
 export default function EchoRoundScreen() {
-  const params = useLocalSearchParams<{ totalScore?: string; difficulty?: string }>();
+  const params = useLocalSearchParams<{ totalScore?: string; duelId?: string }>();
   const previousScore = parseInt(params.totalScore || '0', 10);
+  const duelId = params.duelId || '';
   
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(2);
   const [config, setConfig] = useState(ECHO_CONFIGS[2]);
@@ -133,11 +134,12 @@ export default function EchoRoundScreen() {
     router.replace({
       pathname: '/game/snap',
       params: {
+        duelId,
         totalScore: newTotalScore.toString(),
         echoScore: score.toString(),
       },
     });
-  }, [previousScore, score]);
+  }, [previousScore, score, duelId]);
 
   const gridSize = config.gridSize;
   const cellSize = (width - spacing.lg * 2 - spacing.sm * (gridSize - 1)) / gridSize;

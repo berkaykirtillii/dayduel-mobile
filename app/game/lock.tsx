@@ -116,10 +116,12 @@ export default function LockRoundScreen() {
     totalScore?: string;
     echoScore?: string;
     snapScore?: string;
+    duelId?: string;
   }>();
   const previousScore = parseInt(params.totalScore || '0', 10);
   const echoScore = params.echoScore || '0';
   const snapScore = params.snapScore || '0';
+  const duelId = params.duelId || '';
   
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(2);
   const [config, setConfig] = useState(LOCK_CONFIGS[2]);
@@ -263,6 +265,7 @@ export default function LockRoundScreen() {
     router.replace({
       pathname: '/result',
       params: {
+        duelId,
         score: finalScore.toString(),
         echoScore,
         snapScore,

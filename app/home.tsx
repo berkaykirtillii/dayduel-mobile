@@ -4,7 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrbButton, StatCard, StreakBadge } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
-import { colors, typography, spacing } from '../src/constants/theme';
+import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function HomeScreen() {
   const { todayScore, streak, bestScore, checkCanPlay, refresh } = useGameState();
@@ -32,8 +32,21 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>DAYDUEL</Text>
-        <TouchableOpacity onPress={handleOpenProfile}>
-          <StreakBadge streak={streak} />
+        <TouchableOpacity 
+          onPress={handleOpenProfile}
+          style={styles.profileButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          {streak > 0 ? (
+            <View style={styles.streakBadge}>
+              <Text style={styles.streakIcon}>🔥</Text>
+              <Text style={styles.streakCount}>{streak}</Text>
+            </View>
+          ) : (
+            <View style={styles.profileBadge}>
+              <Text style={styles.profileIcon}>👤</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -70,6 +83,44 @@ const styles = StyleSheet.create({
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 2,
+  },
+  profileButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  streakIcon: {
+    fontSize: typography.sizes.md,
+    marginRight: spacing.xs,
+  },
+  streakCount: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.display.fontWeight,
+    color: colors.text,
+  },
+  profileBadge: {
+    backgroundColor: colors.card,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  profileIcon: {
+    fontSize: typography.sizes.md,
   },
   orbContainer: {
     flex: 1,
