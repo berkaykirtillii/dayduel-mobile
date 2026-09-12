@@ -1,10 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   GameState,
   getGameState,
-  saveScore,
-  updateStreak,
-  incrementDuelsToday,
+  updateStreakAndSaveScore,
   canPlayFreeDuel,
   setOnboardingComplete as setOnboardingCompleteStorage,
   setProStatus as setProStatusStorage,
@@ -21,6 +19,7 @@ export function useGameState() {
     duelsToday: 0,
   });
   const [loading, setLoading] = useState(true);
+  const submittingRef = useRef(false);
 
   const loadState = useCallback(async () => {
     const gameState = await getGameState();
@@ -33,24 +32,32 @@ export function useGameState() {
   }, [loadState]);
 
   const submitScore = useCallback(async (score: number) => {
-    await saveScore(score);
-    const newStreak = await updateStreak();
-    await incrementDuelsToday();
+    if (submittingRef.current) {
+      return { score: state.todayScore, streak: state.streak, alreadySubmitted: true };
+    }
+    submittingRef.current = true;
     
-    setState(prev => ({
-      ...prev,
-      todayScore: score,
-      streak: newStreak,
-      bestScore: Math.max(prev.bestScore, score),
-      lastPlayed: new Date().toDateString(),
-      duelsToday: prev.duelsToday + 1,
-    }));
-    
-    return { score, streak: newStreak };
-  }, []);
+    try {
+      const result = await updateStreakAndSaveScore(score);
+      
+      setState(prev => ({
+        ...prev,
+        todayScore: score,
+        streak: result.newStreak,
+        bestScore: result.newBestScore,
+        lastPlayed: new Date().toDateString(),
+        duelsToday: result.duelsToday,
+      }));
+      
+      return { score, streak: result.newStreak, alreadySubmitted: false };
+    } finally {
+      submittingRef.current = false;
+    }
+  }, [state.todayScore, state.streak]);
 
   const checkCanPlay = useCallback(async () => {
-    return canPlayFreeDuel();
+    const freshState = await getGameState();
+    return freshState.isPro || freshState.duelsToday < 1;
   }, []);
 
   const completeOnboarding = useCallback(async () => {

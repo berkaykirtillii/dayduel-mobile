@@ -67,42 +67,66 @@ export async function getGameState(): Promise<GameState> {
   }
 }
 
-export async function saveScore(score: number): Promise<void> {
-  try {
-    const today = new Date().toDateString();
-    const currentState = await getGameState();
-    
-    await AsyncStorage.setItem(STORAGE_KEYS.SCORE, score.toString());
-    await AsyncStorage.setItem(STORAGE_KEYS.LAST_PLAYED, today);
-    
-    if (score > currentState.bestScore) {
-      await AsyncStorage.setItem('@dayduel/best_score', score.toString());
-    }
-  } catch (error) {
-    console.error('Error saving score:', error);
-  }
-}
-
-export async function updateStreak(): Promise<number> {
+export async function updateStreakAndSaveScore(score: number): Promise<{
+  newStreak: number;
+  newBestScore: number;
+  duelsToday: number;
+}> {
   try {
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
-    const currentState = await getGameState();
     
-    let newStreak = 1;
+    const [
+      storedStreak,
+      storedBestScore,
+      storedLastPlayed,
+      storedDuelsToday,
+    ] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_KEYS.STREAK),
+      AsyncStorage.getItem('@dayduel/best_score'),
+      AsyncStorage.getItem(STORAGE_KEYS.LAST_PLAYED),
+      AsyncStorage.getItem(STORAGE_KEYS.DUELS_TODAY),
+    ]);
     
-    if (currentState.lastPlayed === yesterday) {
-      newStreak = currentState.streak + 1;
-    } else if (currentState.lastPlayed === today) {
-      newStreak = currentState.streak;
+    const currentStreak = parseInt(storedStreak || '0', 10);
+    const currentBestScore = parseInt(storedBestScore || '0', 10);
+    const isNewDay = storedLastPlayed !== today;
+    const currentDuelsToday = isNewDay ? 0 : parseInt(storedDuelsToday || '0', 10);
+    
+    let newStreak = currentStreak;
+    if (storedLastPlayed === yesterday) {
+      newStreak = currentStreak + 1;
+    } else if (storedLastPlayed !== today && storedLastPlayed !== null) {
+      newStreak = 1;
+    } else if (storedLastPlayed === null) {
+      newStreak = 1;
     }
     
-    await AsyncStorage.setItem(STORAGE_KEYS.STREAK, newStreak.toString());
-    return newStreak;
+    const newBestScore = Math.max(currentBestScore, score);
+    const newDuelsToday = currentDuelsToday + 1;
+    
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEYS.SCORE, score.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.STREAK, newStreak.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.LAST_PLAYED, today),
+      AsyncStorage.setItem('@dayduel/best_score', newBestScore.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.DUELS_TODAY, newDuelsToday.toString()),
+    ]);
+    
+    return { newStreak, newBestScore, duelsToday: newDuelsToday };
   } catch (error) {
-    console.error('Error updating streak:', error);
-    return 1;
+    console.error('Error saving score and streak:', error);
+    return { newStreak: 1, newBestScore: score, duelsToday: 1 };
   }
+}
+
+export async function saveScore(score: number): Promise<void> {
+  await updateStreakAndSaveScore(score);
+}
+
+export async function updateStreak(): Promise<number> {
+  const result = await updateStreakAndSaveScore(0);
+  return result.newStreak;
 }
 
 export async function incrementDuelsToday(): Promise<number> {

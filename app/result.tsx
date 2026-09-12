@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,27 +8,51 @@ import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function ResultScreen() {
-  const params = useLocalSearchParams<{ score?: string }>();
+  const params = useLocalSearchParams<{
+    score?: string;
+    echoScore?: string;
+    snapScore?: string;
+    lockScore?: string;
+  }>();
   const score = parseInt(params.score || '0', 10);
-  const { submitScore, bestScore, streak } = useGameState();
+  const echoScore = params.echoScore ? parseInt(params.echoScore, 10) : null;
+  const snapScore = params.snapScore ? parseInt(params.snapScore, 10) : null;
+  const lockScore = params.lockScore ? parseInt(params.lockScore, 10) : null;
+  
+  const { submitScore, bestScore, streak, checkCanPlay, isPro } = useGameState();
   const [newStreak, setNewStreak] = useState(streak);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [canPlayMore, setCanPlayMore] = useState(false);
+  const hasSubmittedRef = useRef(false);
 
   useEffect(() => {
     const saveResult = async () => {
+      if (hasSubmittedRef.current) return;
+      hasSubmittedRef.current = true;
+      
       const result = await submitScore(score);
-      setNewStreak(result.streak);
-      setIsNewBest(score > bestScore);
+      if (!result.alreadySubmitted) {
+        setNewStreak(result.streak);
+        setIsNewBest(score > bestScore);
+      }
+      
+      const canPlay = await checkCanPlay();
+      setCanPlayMore(canPlay);
     };
     saveResult();
-  }, [score, submitScore, bestScore]);
+  }, []);
 
   const handleGoHome = () => {
     router.replace('/home');
   };
 
-  const handlePlayAgain = () => {
-    router.replace('/game');
+  const handlePlayAgain = async () => {
+    const canPlay = await checkCanPlay();
+    if (canPlay) {
+      router.replace('/game');
+    } else {
+      router.push('/paywall');
+    }
   };
 
   return (
@@ -60,21 +84,32 @@ export default function ResultScreen() {
           <Text style={styles.breakdownTitle}>ROUND BREAKDOWN</Text>
           <View style={styles.breakdownItem}>
             <Text style={styles.breakdownLabel}>🧠 Echo (Memory)</Text>
-            <Text style={styles.breakdownValue}>--</Text>
+            <Text style={styles.breakdownValue}>
+              {echoScore !== null ? echoScore.toLocaleString() : '--'}
+            </Text>
           </View>
           <View style={styles.breakdownItem}>
             <Text style={styles.breakdownLabel}>⚡ Snap (Reflex)</Text>
-            <Text style={styles.breakdownValue}>--</Text>
+            <Text style={styles.breakdownValue}>
+              {snapScore !== null ? snapScore.toLocaleString() : '--'}
+            </Text>
           </View>
           <View style={styles.breakdownItem}>
             <Text style={styles.breakdownLabel}>🎯 Lock (Focus)</Text>
-            <Text style={styles.breakdownValue}>--</Text>
+            <Text style={styles.breakdownValue}>
+              {lockScore !== null ? lockScore.toLocaleString() : '--'}
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.footer}>
-        <Button title="PLAY AGAIN" onPress={handlePlayAgain} size="lg" style={styles.button} />
+        <Button
+          title={canPlayMore || isPro ? 'PLAY AGAIN' : 'UPGRADE TO PLAY'}
+          onPress={handlePlayAgain}
+          size="lg"
+          style={styles.button}
+        />
         <Button title="Back to Home" onPress={handleGoHome} variant="ghost" />
       </View>
     </SafeAreaView>

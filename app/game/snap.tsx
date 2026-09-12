@@ -1,163 +1,350 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../src/components';
-import { colors, typography, spacing, borderRadius } from '../../src/constants/theme';
+import { RoundShell, useRoundScore } from '../../src/components';
+import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
+import { SNAP_CONFIGS, DifficultyLevel } from '../../src/constants/gameConfig';
+import { getDifficulty } from '../../src/utils/difficulty';
 
-const ROUND_DURATION = 90;
+const { width, height } = Dimensions.get('window');
+const PLAY_AREA_HEIGHT = height * 0.6;
+const TARGET_SIZE = 70;
+
+interface Target {
+  id: string;
+  x: number;
+  y: number;
+  isDistractor: boolean;
+  opacity: Animated.Value;
+  scale: Animated.Value;
+  createdAt: number;
+}
 
 export default function SnapRoundScreen() {
-  const [timeLeft, setTimeLeft] = useState(ROUND_DURATION);
-  const [score, setScore] = useState(0);
-  const params = useLocalSearchParams<{ totalScore?: string }>();
+  const params = useLocalSearchParams<{
+    totalScore?: string;
+    echoScore?: string;
+  }>();
   const previousScore = parseInt(params.totalScore || '0', 10);
+  const echoScore = params.echoScore || '0';
+  
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(2);
+  const [config, setConfig] = useState(SNAP_CONFIGS[2]);
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [hits, setHits] = useState(0);
+  const [misses, setMisses] = useState(0);
+  
+  const { score, addScore, penalize, feedback } = useRoundScore();
+  const spawnIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const targetIdRef = useRef(0);
+  const isGameActiveRef = useRef(true);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      handleComplete();
-    }
-  }, [timeLeft]);
+    const init = async () => {
+      const diff = await getDifficulty();
+      setDifficulty(diff);
+      setConfig(SNAP_CONFIGS[diff]);
+    };
+    init();
+  }, []);
 
-  const handleComplete = () => {
+  const spawnTarget = useCallback(() => {
+    if (!isGameActiveRef.current) return;
+    
+    const isDistractor = Math.random() < config.distractorRatio;
+    const id = `target-${targetIdRef.current++}`;
+    
+    const padding = TARGET_SIZE / 2 + 20;
+    const x = padding + Math.random() * (width - spacing.lg * 2 - padding * 2);
+    const y = padding + Math.random() * (PLAY_AREA_HEIGHT - padding * 2);
+    
+    const opacity = new Animated.Value(0);
+    const scale = new Animated.Value(0.5);
+    
+    const newTarget: Target = {
+      id,
+      x,
+      y,
+      isDistractor,
+      opacity,
+      scale,
+      createdAt: Date.now(),
+    };
+
+    setTargets(prev => {
+      if (prev.length >= config.maxTargetsOnScreen) {
+        return prev;
+      }
+      return [...prev, newTarget];
+    });
+
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    setTimeout(() => {
+      removeTarget(id, true);
+    }, config.targetLifetimeMs);
+  }, [config]);
+
+  const removeTarget = useCallback((id: string, expired = false) => {
+    setTargets(prev => {
+      const target = prev.find(t => t.id === id);
+      if (!target) return prev;
+
+      Animated.timing(target.opacity, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true,
+      }).start();
+
+      return prev.filter(t => t.id !== id);
+    });
+    
+    if (expired) {
+      setTargets(prev => {
+        const target = prev.find(t => t.id === id);
+        if (target && !target.isDistractor) {
+          setMisses(m => m + 1);
+        }
+        return prev.filter(t => t.id !== id);
+      });
+    }
+  }, []);
+
+  const handleTargetPress = useCallback((target: Target) => {
+    if (target.isDistractor) {
+      penalize(config.penaltyPerDistractor);
+      setMisses(m => m + 1);
+    } else {
+      const timeSinceSpawn = Date.now() - target.createdAt;
+      const speedBonus = Math.max(0, Math.floor((config.targetLifetimeMs - timeSinceSpawn) / 100) * 5);
+      addScore(config.pointsPerTarget + speedBonus);
+      setHits(h => h + 1);
+    }
+    
+    removeTarget(target.id);
+  }, [config, addScore, penalize, removeTarget]);
+
+  useEffect(() => {
+    if (!config) return;
+    
+    spawnIntervalRef.current = setInterval(spawnTarget, config.spawnRateMs);
+    
+    setTimeout(spawnTarget, 500);
+
+    return () => {
+      if (spawnIntervalRef.current) {
+        clearInterval(spawnIntervalRef.current);
+      }
+    };
+  }, [config, spawnTarget]);
+
+  const handleTimeUp = useCallback(() => {
+    isGameActiveRef.current = false;
+    if (spawnIntervalRef.current) {
+      clearInterval(spawnIntervalRef.current);
+    }
+    
     const newTotalScore = previousScore + score;
     router.replace({
       pathname: '/game/lock',
-      params: { totalScore: newTotalScore.toString() },
+      params: {
+        totalScore: newTotalScore.toString(),
+        echoScore,
+        snapScore: score.toString(),
+      },
     });
-  };
+  }, [previousScore, score, echoScore]);
 
-  const handleTap = () => {
-    setScore(prev => prev + 50);
-  };
-
-  const progress = timeLeft / ROUND_DURATION;
+  const accuracy = hits + misses > 0 ? Math.round((hits / (hits + misses)) * 100) : 100;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.roundInfo}>
-          <Text style={styles.roundLabel}>ROUND 2</Text>
-          <Text style={styles.roundName}>SNAP</Text>
-        </View>
-        <View style={styles.timer}>
-          <Text style={styles.timerText}>{timeLeft}s</Text>
-        </View>
-      </View>
-
-      <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-      </View>
-
+    <RoundShell
+      roundNumber={2}
+      roundName="SNAP"
+      roundColor={colors.magenta}
+      score={score}
+      onTimeUp={handleTimeUp}
+      instruction="Tap ORANGE targets! Avoid gray distractors."
+    >
       <View style={styles.content}>
-        <Text style={styles.instruction}>⚡ Reflex Round</Text>
-        <Text style={styles.description}>
-          React as fast as you can!{'\n'}
-          (Placeholder - game logic coming soon)
-        </Text>
-
-        <TouchableOpacity style={styles.tapArea} onPress={handleTap}>
-          <Text style={styles.tapText}>TAP TO SCORE</Text>
-          <Text style={styles.scoreText}>{score}</Text>
-        </TouchableOpacity>
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{hits}</Text>
+            <Text style={styles.statLabel}>HITS</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{accuracy}%</Text>
+            <Text style={styles.statLabel}>ACCURACY</Text>
+          </View>
+        </View>
+        
+        <View style={[styles.playArea, { height: PLAY_AREA_HEIGHT }]}>
+          {targets.map(target => (
+            <Animated.View
+              key={target.id}
+              style={[
+                styles.targetContainer,
+                {
+                  left: target.x - TARGET_SIZE / 2,
+                  top: target.y - TARGET_SIZE / 2,
+                  opacity: target.opacity,
+                  transform: [{ scale: target.scale }],
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.target,
+                  target.isDistractor ? styles.distractor : styles.realTarget,
+                ]}
+                onPress={() => handleTargetPress(target)}
+                activeOpacity={0.7}
+              >
+                {!target.isDistractor && (
+                  <View style={styles.targetInner} />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          ))}
+          
+          {targets.length === 0 && (
+            <View style={styles.waitingContainer}>
+              <Text style={styles.waitingText}>Get ready...</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendTarget]} />
+            <Text style={styles.legendText}>Target (+{config.pointsPerTarget})</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendDistractor]} />
+            <Text style={styles.legendText}>Avoid (-{config.penaltyPerDistractor})</Text>
+          </View>
+        </View>
       </View>
-
-      <View style={styles.footer}>
-        <Button title="SKIP ROUND" onPress={handleComplete} variant="ghost" />
-      </View>
-    </SafeAreaView>
+    </RoundShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  roundInfo: {},
-  roundLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    letterSpacing: 2,
-  },
-  roundName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.display.fontWeight,
-    color: colors.magenta,
-    letterSpacing: 2,
-  },
-  timer: {
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  timerText: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.display.fontWeight,
-    color: colors.text,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
-    borderRadius: 2,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.magenta,
-    borderRadius: 2,
-  },
   content: {
     flex: 1,
-    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  statsRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    gap: spacing.xl,
+    paddingVertical: spacing.sm,
   },
-  instruction: {
-    fontSize: typography.sizes.xxl,
-    marginBottom: spacing.md,
-  },
-  description: {
-    fontSize: typography.sizes.md,
-    color: colors.muted,
-    textAlign: 'center',
-    marginBottom: spacing.xxl,
-  },
-  tapArea: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.magenta,
+  statItem: {
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  tapText: {
-    fontSize: typography.sizes.sm,
-    color: colors.muted,
-    letterSpacing: 2,
-  },
-  scoreText: {
-    fontSize: typography.sizes.xxxl,
+  statValue: {
+    fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
-    marginTop: spacing.sm,
   },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+  statLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    letterSpacing: 1,
+  },
+  playArea: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  targetContainer: {
+    position: 'absolute',
+    width: TARGET_SIZE,
+    height: TARGET_SIZE,
+  },
+  target: {
+    width: TARGET_SIZE,
+    height: TARGET_SIZE,
+    borderRadius: TARGET_SIZE / 2,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  realTarget: {
+    backgroundColor: colors.orange,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  distractor: {
+    backgroundColor: colors.mutedDark,
+    borderWidth: 2,
+    borderColor: colors.muted,
+  },
+  targetInner: {
+    width: TARGET_SIZE * 0.4,
+    height: TARGET_SIZE * 0.4,
+    borderRadius: TARGET_SIZE * 0.2,
+    backgroundColor: colors.orangeLight,
+  },
+  waitingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  waitingText: {
+    fontSize: typography.sizes.lg,
+    color: colors.muted,
+  },
+  legend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    paddingVertical: spacing.md,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  legendDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  legendTarget: {
+    backgroundColor: colors.orange,
+  },
+  legendDistractor: {
+    backgroundColor: colors.mutedDark,
+    borderWidth: 1,
+    borderColor: colors.muted,
+  },
+  legendText: {
+    fontSize: typography.sizes.sm,
+    color: colors.muted,
   },
 });
