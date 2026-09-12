@@ -194,6 +194,7 @@ export async function resetStreakAndScore(): Promise<void> {
       AsyncStorage.removeItem(STORAGE_KEYS.STREAK),
       AsyncStorage.removeItem(STORAGE_KEYS.DUELS_TODAY),
       AsyncStorage.removeItem(STORAGE_KEYS.LAST_DUEL_ID),
+      AsyncStorage.removeItem(STORAGE_KEYS.LAST_PLAYED),
     ]);
   } catch (error) {
     console.error('Error resetting streak and score:', error);

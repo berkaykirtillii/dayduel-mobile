@@ -7,7 +7,7 @@ import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function HomeScreen() {
-  const { todayScore, streak, bestScore, checkCanPlay, refresh } = useGameState();
+  const { todayScore, streak, bestScore, checkCanPlay, refresh, duelsToday, isPro } = useGameState();
 
   useFocusEffect(
     useCallback(() => {
@@ -28,10 +28,15 @@ export default function HomeScreen() {
     router.push('/profile');
   };
 
+  const canPlayToday = isPro || duelsToday < 1;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>DAYDUEL</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.logo}>DAYDUEL</Text>
+          <Text style={styles.tagline}>5-MIN MIND SPRINT</Text>
+        </View>
         <TouchableOpacity 
           onPress={handleOpenProfile}
           style={styles.profileButton}
@@ -51,16 +56,31 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.orbContainer}>
-        <OrbButton onPress={handleStartDuel} />
+        <OrbButton 
+          onPress={handleStartDuel} 
+          disabled={!canPlayToday}
+          subtitle={canPlayToday ? 'TAP TO START' : 'COME BACK TOMORROW'}
+        />
+        {!canPlayToday && (
+          <TouchableOpacity onPress={() => router.push('/paywall')} style={styles.unlockHint}>
+            <Text style={styles.unlockText}>or unlock unlimited with Pro →</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.stats}>
-        <View style={styles.statRow}>
-          <StatCard label="Today's Score" value={todayScore.toLocaleString()} />
-          <View style={styles.statGap} />
-          <StatCard label="Streak" value={`${streak} days`} />
+        <View style={styles.statsHeader}>
+          <Text style={styles.statsLabel}>TODAY'S PROGRESS</Text>
         </View>
-        <Text style={styles.bestScore}>Best {bestScore.toLocaleString()}</Text>
+        <View style={styles.statRow}>
+          <StatCard label="Score" value={todayScore.toLocaleString()} />
+          <View style={styles.statGap} />
+          <StatCard label="Streak" value={`${streak}🔥`} variant={streak > 0 ? 'highlight' : 'default'} />
+        </View>
+        <View style={styles.bestScoreContainer}>
+          <Text style={styles.bestScoreLabel}>PERSONAL BEST</Text>
+          <Text style={styles.bestScoreValue}>{bestScore.toLocaleString()}</Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -74,15 +94,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  headerLeft: {},
   logo: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
+    letterSpacing: 3,
+  },
+  tagline: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
     letterSpacing: 2,
+    marginTop: 2,
   },
   profileButton: {
     minWidth: 44,
@@ -94,42 +121,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.orange,
   },
   streakIcon: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     marginRight: spacing.xs,
   },
   streakCount: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.display.fontWeight,
-    color: colors.text,
+    color: colors.orange,
   },
   profileBadge: {
     backgroundColor: colors.card,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    minWidth: 40,
+    minWidth: 44,
     alignItems: 'center',
   },
   profileIcon: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
   },
   orbContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  unlockHint: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  unlockText: {
+    fontSize: typography.sizes.sm,
+    color: colors.magenta,
+  },
   stats: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xl,
+  },
+  statsHeader: {
+    marginBottom: spacing.sm,
+  },
+  statsLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
   statRow: {
     flexDirection: 'row',
@@ -138,9 +183,26 @@ const styles = StyleSheet.create({
   statGap: {
     width: spacing.md,
   },
-  bestScore: {
-    textAlign: 'center',
-    fontSize: typography.sizes.sm,
+  bestScoreContainer: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  bestScoreLabel: {
+    fontSize: typography.sizes.xs,
     color: colors.muted,
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  bestScoreValue: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.display.fontWeight,
+    color: colors.text,
   },
 });
