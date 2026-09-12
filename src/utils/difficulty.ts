@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DifficultyLevel } from '../constants/gameConfig';
 
+export type { DifficultyLevel } from '../constants/gameConfig';
+
 const DIFFICULTY_KEY = '@dayduel/difficulty';
 const LAST_PERFORMANCE_KEY = '@dayduel/last_performance';
 
