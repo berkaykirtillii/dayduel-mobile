@@ -26,34 +26,42 @@ export function RoundShell({
   instruction,
 }: RoundShellProps) {
   const [timeLeft, setTimeLeft] = useState(ROUND_DURATION);
+  const timeLeftRef = useRef(ROUND_DURATION);
   const onTimeUpRef = useRef(onTimeUp);
   const hasEndedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     onTimeUpRef.current = onTimeUp;
   }, [onTimeUp]);
 
   useEffect(() => {
-    if (timeLeft <= 0 && !hasEndedRef.current) {
-      hasEndedRef.current = true;
-      onTimeUpRef.current();
-      return;
-    }
+    intervalRef.current = setInterval(() => {
+      timeLeftRef.current -= 1;
+      const newTime = timeLeftRef.current;
+      
+      setTimeLeft(newTime);
 
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
+      if (newTime === 10) {
+        Vibration.vibrate(100);
+      }
+
+      if (newTime <= 0 && !hasEndedRef.current) {
+        hasEndedRef.current = true;
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
-        if (prev === 11) {
-          Vibration.vibrate(100);
-        }
-        return prev - 1;
-      });
+        onTimeUpRef.current();
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, []);
 
   const progress = timeLeft / ROUND_DURATION;

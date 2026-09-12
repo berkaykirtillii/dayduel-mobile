@@ -110,17 +110,20 @@ export async function submitDuelScore(
       storedBestScore,
       storedLastPlayed,
       storedDuelsToday,
+      storedTodayScore,
     ] = await Promise.all([
       AsyncStorage.getItem(STORAGE_KEYS.STREAK),
       AsyncStorage.getItem(STORAGE_KEYS.BEST_SCORE),
       AsyncStorage.getItem(STORAGE_KEYS.LAST_PLAYED),
       AsyncStorage.getItem(STORAGE_KEYS.DUELS_TODAY),
+      AsyncStorage.getItem(STORAGE_KEYS.SCORE),
     ]);
 
     const currentStreak = parseInt(storedStreak || '0', 10);
     const currentBestScore = parseInt(storedBestScore || '0', 10);
     const isNewDay = storedLastPlayed !== today;
     const currentDuelsToday = isNewDay ? 0 : parseInt(storedDuelsToday || '0', 10);
+    const currentTodayScore = isNewDay ? 0 : parseInt(storedTodayScore || '0', 10);
 
     let newStreak: number;
     
@@ -134,11 +137,12 @@ export async function submitDuelScore(
       newStreak = 1;
     }
 
+    const newTodayScore = Math.max(currentTodayScore, score);
     const newBestScore = Math.max(currentBestScore, score);
     const newDuelsToday = currentDuelsToday + 1;
 
     await Promise.all([
-      AsyncStorage.setItem(STORAGE_KEYS.SCORE, score.toString()),
+      AsyncStorage.setItem(STORAGE_KEYS.SCORE, newTodayScore.toString()),
       AsyncStorage.setItem(STORAGE_KEYS.STREAK, newStreak.toString()),
       AsyncStorage.setItem(STORAGE_KEYS.LAST_PLAYED, today),
       AsyncStorage.setItem(STORAGE_KEYS.BEST_SCORE, newBestScore.toString()),
