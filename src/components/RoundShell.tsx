@@ -71,35 +71,39 @@ export function RoundShell({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.roundInfo}>
-          <Text style={styles.roundLabel}>ROUND {roundNumber}</Text>
+          <Text style={styles.roundLabel}>ROUND {roundNumber}/3</Text>
           <Text style={[styles.roundName, { color: roundColor }]}>{roundName}</Text>
         </View>
         <View style={styles.headerRight}>
           {showScore && (
             <View style={styles.scoreContainer}>
               <Text style={styles.scoreLabel}>SCORE</Text>
-              <Text style={styles.scoreValue}>{score}</Text>
+              <Text style={[styles.scoreValue, { color: roundColor }]}>{score}</Text>
             </View>
           )}
-          <View style={[styles.timer, isLowTime && styles.timerLow]}>
+          <View style={[styles.timer, isLowTime && styles.timerLow, { borderColor: roundColor }]}>
             <Text style={[styles.timerText, isLowTime && styles.timerTextLow]}>
-              {timeLeft}s
+              {timeLeft}
             </Text>
+            <Text style={[styles.timerUnit, isLowTime && styles.timerTextLow]}>SEC</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${progress * 100}%`, backgroundColor: roundColor },
-          ]}
-        />
+      <View style={styles.progressBarContainer}>
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${progress * 100}%`, backgroundColor: roundColor },
+            ]}
+          />
+        </View>
+        <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
       </View>
 
       {instruction && (
-        <View style={styles.instructionContainer}>
+        <View style={[styles.instructionContainer, { borderColor: roundColor }]}>
           <Text style={styles.instruction}>{instruction}</Text>
         </View>
       )}
@@ -150,75 +154,110 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   roundInfo: {},
   roundLabel: {
     fontSize: typography.sizes.xs,
     color: colors.muted,
     letterSpacing: 2,
+    fontWeight: '600',
   },
   roundName: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.xxl,
     fontWeight: typography.display.fontWeight,
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   scoreContainer: {
     alignItems: 'flex-end',
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   scoreLabel: {
-    fontSize: typography.sizes.xs,
+    fontSize: 10,
     color: colors.muted,
     letterSpacing: 1,
+    fontWeight: '600',
   },
   scoreValue: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
-    color: colors.text,
   },
   timer: {
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    minWidth: 60,
+    minWidth: 70,
     alignItems: 'center',
+    borderWidth: 2,
   },
   timerLow: {
     backgroundColor: colors.error,
+    borderColor: colors.error,
   },
   timerText: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
+  },
+  timerUnit: {
+    fontSize: 9,
+    color: colors.muted,
+    letterSpacing: 1,
+    fontWeight: '600',
   },
   timerTextLow: {
     color: colors.text,
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: colors.card,
+  progressBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: spacing.lg,
-    borderRadius: 2,
+    gap: spacing.sm,
+  },
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: colors.card,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    fontWeight: '600',
+    minWidth: 36,
+    textAlign: 'right',
   },
   instructionContainer: {
-    paddingHorizontal: spacing.lg,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.sm,
+    borderLeftWidth: 3,
   },
   instruction: {
-    fontSize: typography.sizes.md,
-    color: colors.muted,
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
+    fontWeight: '500',
   },
   content: {
     flex: 1,

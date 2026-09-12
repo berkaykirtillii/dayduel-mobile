@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, typography, spacing } from '../../src/constants/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/constants/theme';
 import { generateDuelId } from '../../src/utils/storage';
 
 const ROUNDS = [
@@ -67,45 +67,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   title: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.xxl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 4,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
   },
   countdown: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xxl,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 10,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   countdownText: {
     fontSize: typography.sizes.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   rounds: {
     width: '100%',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   roundItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
     padding: spacing.md,
-    borderRadius: 12,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   roundNumber: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     fontWeight: typography.display.fontWeight,
-    color: colors.muted,
+    color: colors.mutedDark,
     marginRight: spacing.md,
     width: 24,
+    textAlign: 'center',
   },
   roundInfo: {
     flexDirection: 'row',
@@ -113,16 +124,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   roundIcon: {
-    fontSize: 24,
+    fontSize: 26,
   },
   roundName: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
   roundDescription: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     color: colors.muted,
+    letterSpacing: 0.5,
   },
 });
