@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, StatCard } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
+import { adjustDifficultyAfterGame, getDifficulty, DifficultyLevel } from '../src/utils/difficulty';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function ResultScreen() {
@@ -28,6 +29,11 @@ export default function ResultScreen() {
   const [isNewBest, setIsNewBest] = useState(false);
   const [canPlayMore, setCanPlayMore] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [difficultyChange, setDifficultyChange] = useState<{
+    oldLevel: DifficultyLevel;
+    newLevel: DifficultyLevel;
+  } | null>(null);
+  const difficultyFadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (hasSubmitted || !duelId) return;
@@ -48,6 +54,35 @@ export default function ResultScreen() {
       
       const canPlay = await checkCanPlay();
       setCanPlayMore(canPlay);
+
+      const oldDifficulty = await getDifficulty();
+      const echoAcc = echoScore !== null ? Math.min(1, echoScore / 1000) : 0.5;
+      const snapAcc = snapScore !== null ? Math.min(1, snapScore / 750) : 0.5;
+      const lockAcc = lockScore !== null ? Math.min(1, lockScore / 900) : 0.5;
+      
+      const newDifficulty = await adjustDifficultyAfterGame({
+        echoAccuracy: echoAcc,
+        snapAccuracy: snapAcc,
+        lockAccuracy: lockAcc,
+        totalScore: score,
+      });
+
+      if (newDifficulty !== oldDifficulty) {
+        setDifficultyChange({ oldLevel: oldDifficulty, newLevel: newDifficulty });
+        Animated.sequence([
+          Animated.timing(difficultyFadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.delay(3000),
+          Animated.timing(difficultyFadeAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]).start(() => setDifficultyChange(null));
+      }
     };
     
     saveResult();
@@ -68,6 +103,20 @@ export default function ResultScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {difficultyChange && (
+        <Animated.View
+          style={[
+            styles.difficultyNotification,
+            { opacity: difficultyFadeAnim },
+          ]}
+        >
+          <Text style={styles.difficultyNotificationText}>
+            {difficultyChange.newLevel > difficultyChange.oldLevel
+              ? `⬆️ Difficulty: L${difficultyChange.oldLevel} → L${difficultyChange.newLevel}`
+              : `⬇️ Difficulty: L${difficultyChange.oldLevel} → L${difficultyChange.newLevel}`}
+          </Text>
+        </Animated.View>
+      )}
       <View style={styles.content}>
         <Text style={styles.title}>DUEL COMPLETE</Text>
         
@@ -131,6 +180,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  difficultyNotification: {
+    position: 'absolute',
+    top: 60,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.orange,
+    zIndex: 100,
+    alignItems: 'center',
+  },
+  difficultyNotificationText: {
+    fontSize: typography.sizes.md,
+    fontWeight: '700',
+    color: colors.orange,
+    letterSpacing: 1,
   },
   content: {
     flex: 1,

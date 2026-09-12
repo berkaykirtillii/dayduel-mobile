@@ -1,13 +1,31 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Switch } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, StatCard } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { resetGameState } from '../src/utils/storage';
+import { getDifficulty, setDifficulty, DifficultyLevel } from '../src/utils/difficulty';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function ProfileScreen() {
-  const { todayScore, streak, bestScore, isPro, duelsToday, refresh } = useGameState();
+  const { 
+    todayScore, 
+    streak, 
+    bestScore, 
+    isPro, 
+    duelsToday, 
+    refresh,
+    devUnlimited,
+    toggleDevUnlimited,
+    resetStreakAndScore,
+  } = useGameState();
+  
+  const [currentDifficulty, setCurrentDifficulty] = useState<DifficultyLevel>(2);
+
+  useEffect(() => {
+    getDifficulty().then(setCurrentDifficulty);
+  }, []);
 
   const handleBack = () => {
     router.back();
@@ -15,6 +33,29 @@ export default function ProfileScreen() {
 
   const handleUpgrade = () => {
     router.push('/paywall');
+  };
+
+  const handleDifficultyChange = async (level: DifficultyLevel) => {
+    await setDifficulty(level);
+    setCurrentDifficulty(level);
+  };
+
+  const handleResetQA = () => {
+    Alert.alert(
+      'Reset Streak & Score',
+      'This will reset your streak and all scores to 0 for QA testing.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await resetStreakAndScore();
+            Alert.alert('Reset Complete', 'Streak and scores have been reset.');
+          },
+        },
+      ]
+    );
   };
 
   const handleResetData = () => {
@@ -105,6 +146,57 @@ export default function ProfileScreen() {
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
         </View>
+
+        {__DEV__ && (
+          <View style={styles.devSection}>
+            <Text style={styles.devSectionTitle}>🛠 DEV / TEST</Text>
+            
+            <View style={styles.devCard}>
+              <Text style={styles.devLabel}>Difficulty Level</Text>
+              <View style={styles.difficultyPicker}>
+                {([1, 2, 3, 4, 5] as DifficultyLevel[]).map((level) => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.difficultyButton,
+                      currentDifficulty === level && styles.difficultyButtonActive,
+                    ]}
+                    onPress={() => handleDifficultyChange(level)}
+                  >
+                    <Text
+                      style={[
+                        styles.difficultyButtonText,
+                        currentDifficulty === level && styles.difficultyButtonTextActive,
+                      ]}
+                    >
+                      L{level}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.devHint}>Current: Level {currentDifficulty}</Text>
+            </View>
+
+            <View style={styles.devCard}>
+              <View style={styles.devToggleRow}>
+                <View style={styles.devToggleInfo}>
+                  <Text style={styles.devLabel}>Unlimited Duels (Test)</Text>
+                  <Text style={styles.devHint}>Bypass freemium 1/day limit</Text>
+                </View>
+                <Switch
+                  value={devUnlimited}
+                  onValueChange={toggleDevUnlimited}
+                  trackColor={{ false: colors.cardBorder, true: colors.orange }}
+                  thumbColor={colors.text}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.devResetButton} onPress={handleResetQA}>
+              <Text style={styles.devResetText}>Reset Streak & Score (QA)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -232,5 +324,84 @@ const styles = StyleSheet.create({
   version: {
     fontSize: typography.sizes.xs,
     color: colors.mutedDark,
+  },
+  devSection: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.orange,
+  },
+  devSectionTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: '700',
+    color: colors.orange,
+    letterSpacing: 2,
+    marginBottom: spacing.md,
+  },
+  devCard: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.orange,
+    borderStyle: 'dashed',
+  },
+  devLabel: {
+    fontSize: typography.sizes.md,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  devHint: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    marginTop: spacing.xs,
+  },
+  difficultyPicker: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  difficultyButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.cardBorder,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+  },
+  difficultyButtonActive: {
+    backgroundColor: colors.orange,
+  },
+  difficultyButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
+    color: colors.muted,
+  },
+  difficultyButtonTextActive: {
+    color: colors.text,
+  },
+  devToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  devToggleInfo: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  devResetButton: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.error,
+    marginTop: spacing.sm,
+  },
+  devResetText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: '600',
+    color: colors.error,
   },
 });

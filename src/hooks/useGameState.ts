@@ -7,6 +7,9 @@ import {
   setOnboardingComplete as setOnboardingCompleteStorage,
   setProStatus as setProStatusStorage,
   generateDuelId,
+  getDevUnlimitedMode,
+  setDevUnlimitedMode as setDevUnlimitedModeStorage,
+  resetStreakAndScore as resetStreakAndScoreStorage,
 } from '../utils/storage';
 
 export function useGameState() {
@@ -20,10 +23,15 @@ export function useGameState() {
     duelsToday: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [devUnlimited, setDevUnlimited] = useState(false);
 
   const loadState = useCallback(async () => {
     const gameState = await getGameState();
     setState(gameState);
+    if (__DEV__) {
+      const devMode = await getDevUnlimitedMode();
+      setDevUnlimited(devMode);
+    }
     setLoading(false);
   }, []);
 
@@ -62,6 +70,23 @@ export function useGameState() {
     setState(prev => ({ ...prev, isPro: true }));
   }, []);
 
+  const toggleDevUnlimited = useCallback(async (enabled: boolean) => {
+    if (!__DEV__) return;
+    await setDevUnlimitedModeStorage(enabled);
+    setDevUnlimited(enabled);
+  }, []);
+
+  const resetStreakAndScore = useCallback(async () => {
+    await resetStreakAndScoreStorage();
+    setState(prev => ({
+      ...prev,
+      todayScore: 0,
+      bestScore: 0,
+      streak: 0,
+      duelsToday: 0,
+    }));
+  }, []);
+
   return {
     ...state,
     loading,
@@ -71,5 +96,8 @@ export function useGameState() {
     upgradeToPro,
     refresh: loadState,
     generateDuelId,
+    devUnlimited,
+    toggleDevUnlimited,
+    resetStreakAndScore,
   };
 }

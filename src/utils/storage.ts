@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   IS_PRO: '@dayduel/is_pro',
   DUELS_TODAY: '@dayduel/duels_today',
   LAST_DUEL_ID: '@dayduel/last_duel_id',
+  DEV_UNLIMITED: '@dayduel/dev_unlimited',
 } as const;
 
 export interface GameState {
@@ -158,8 +159,45 @@ export async function submitDuelScore(
 }
 
 export async function canPlayFreeDuel(): Promise<boolean> {
+  if (__DEV__) {
+    const devUnlimited = await AsyncStorage.getItem(STORAGE_KEYS.DEV_UNLIMITED);
+    if (devUnlimited === 'true') return true;
+  }
   const state = await getGameState();
   return state.isPro || state.duelsToday < 1;
+}
+
+export async function getDevUnlimitedMode(): Promise<boolean> {
+  if (!__DEV__) return false;
+  try {
+    const value = await AsyncStorage.getItem(STORAGE_KEYS.DEV_UNLIMITED);
+    return value === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function setDevUnlimitedMode(enabled: boolean): Promise<void> {
+  if (!__DEV__) return;
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.DEV_UNLIMITED, enabled.toString());
+  } catch (error) {
+    console.error('Error setting dev unlimited mode:', error);
+  }
+}
+
+export async function resetStreakAndScore(): Promise<void> {
+  try {
+    await Promise.all([
+      AsyncStorage.removeItem(STORAGE_KEYS.SCORE),
+      AsyncStorage.removeItem(STORAGE_KEYS.BEST_SCORE),
+      AsyncStorage.removeItem(STORAGE_KEYS.STREAK),
+      AsyncStorage.removeItem(STORAGE_KEYS.DUELS_TODAY),
+      AsyncStorage.removeItem(STORAGE_KEYS.LAST_DUEL_ID),
+    ]);
+  } catch (error) {
+    console.error('Error resetting streak and score:', error);
+  }
 }
 
 export async function setOnboardingComplete(): Promise<void> {
