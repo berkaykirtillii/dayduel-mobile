@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
+import { lightImpact } from '../src/utils/haptics';
 
 const FEATURES = [
   { icon: '♾️', text: 'Unlimited daily duels' },
@@ -18,14 +19,17 @@ export default function PaywallScreen() {
   const { upgradeToPro } = useGameState();
 
   const handlePurchase = async () => {
-    // TODO: Integrate with in-app purchases
+    await lightImpact();
     await upgradeToPro();
     router.back();
   };
 
   const handleRestore = () => {
-    // TODO: Implement restore purchases
-    console.log('Restore purchases');
+    Alert.alert(
+      'Not Available',
+      'Restore purchases is not available in this demo version.',
+      [{ text: 'OK', style: 'default' }]
+    );
   };
 
   const handleClose = () => {
@@ -73,11 +77,12 @@ export default function PaywallScreen() {
           size="lg"
           style={styles.button}
         />
-        <Button
-          title="Restore Purchases"
-          onPress={handleRestore}
-          variant="ghost"
-        />
+        <View style={styles.restoreContainer}>
+          <Text style={styles.restoreText} onPress={handleRestore}>
+            Restore Purchases
+          </Text>
+          <Text style={styles.stubLabel}>(Demo)</Text>
+        </View>
         <Text style={styles.terms}>
           Cancel anytime. Terms and conditions apply.
         </Text>
@@ -173,6 +178,20 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+  },
+  restoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  restoreText: {
+    fontSize: typography.sizes.sm,
+    color: colors.mutedDark,
+  },
+  stubLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.mutedDark,
+    opacity: 0.6,
   },
   terms: {
     fontSize: typography.sizes.xs,

@@ -84,6 +84,7 @@ export function useGameState() {
       bestScore: 0,
       streak: 0,
       duelsToday: 0,
+      lastPlayed: null,
     }));
   }, []);
 

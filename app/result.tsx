@@ -7,6 +7,7 @@ import { Button, StatCard } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { adjustDifficultyAfterGame, getDifficulty, DifficultyLevel } from '../src/utils/difficulty';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
+import { successNotification, mediumImpact } from '../src/utils/haptics';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams<{
@@ -46,7 +47,11 @@ export default function ResultScreen() {
       if (!result.wasAlreadySubmitted) {
         setNewStreak(result.newStreak);
         setNewBestScore(result.newBestScore);
-        setIsNewBest(score > bestScore && score === result.newBestScore);
+        const achievedNewBest = score > bestScore && score === result.newBestScore;
+        setIsNewBest(achievedNewBest);
+        if (achievedNewBest) {
+          successNotification();
+        }
       } else {
         setNewStreak(result.newStreak);
         setNewBestScore(result.newBestScore);
@@ -69,16 +74,17 @@ export default function ResultScreen() {
 
       if (newDifficulty !== oldDifficulty) {
         setDifficultyChange({ oldLevel: oldDifficulty, newLevel: newDifficulty });
+        mediumImpact();
         Animated.sequence([
           Animated.timing(difficultyFadeAnim, {
             toValue: 1,
-            duration: 300,
+            duration: 400,
             useNativeDriver: true,
           }),
-          Animated.delay(3000),
+          Animated.delay(4000),
           Animated.timing(difficultyFadeAnim, {
             toValue: 0,
-            duration: 500,
+            duration: 600,
             useNativeDriver: true,
           }),
         ]).start(() => setDifficultyChange(null));
@@ -110,52 +116,84 @@ export default function ResultScreen() {
             { opacity: difficultyFadeAnim },
           ]}
         >
-          <Text style={styles.difficultyNotificationText}>
-            {difficultyChange.newLevel > difficultyChange.oldLevel
-              ? `⬆️ Difficulty: L${difficultyChange.oldLevel} → L${difficultyChange.newLevel}`
-              : `⬇️ Difficulty: L${difficultyChange.oldLevel} → L${difficultyChange.newLevel}`}
-          </Text>
+          <LinearGradient
+            colors={difficultyChange.newLevel > difficultyChange.oldLevel 
+              ? [colors.success, '#1a8a4c'] 
+              : [colors.warning, '#c77808']}
+            style={styles.difficultyGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={styles.difficultyIcon}>
+              {difficultyChange.newLevel > difficultyChange.oldLevel ? '⬆️' : '⬇️'}
+            </Text>
+            <View style={styles.difficultyContent}>
+              <Text style={styles.difficultyLabel}>DIFFICULTY ADJUSTED</Text>
+              <Text style={styles.difficultyNotificationText}>
+                Level {difficultyChange.oldLevel} → Level {difficultyChange.newLevel}
+              </Text>
+            </View>
+          </LinearGradient>
         </Animated.View>
       )}
       <View style={styles.content}>
         <Text style={styles.title}>DUEL COMPLETE</Text>
         
         {isNewBest && (
-          <View style={styles.newBestBadge}>
+          <LinearGradient
+            colors={[colors.orange, colors.orangeDark]}
+            style={styles.newBestBadge}
+          >
             <Text style={styles.newBestText}>🏆 NEW BEST!</Text>
-          </View>
+          </LinearGradient>
         )}
 
         <LinearGradient
           colors={[colors.orangeLight, colors.orange, colors.orangeDark]}
           style={styles.scoreContainer}
         >
-          <Text style={styles.scoreLabel}>TODAY'S SCORE</Text>
+          <Text style={styles.scoreLabel}>TOTAL SCORE</Text>
           <Text style={styles.score}>{score.toLocaleString()}</Text>
         </LinearGradient>
 
         <View style={styles.stats}>
-          <StatCard label="Streak" value={`${newStreak} days`} variant="highlight" />
-          <View style={styles.statGap} />
-          <StatCard label="Best" value={newBestScore.toLocaleString()} />
+          <View style={styles.statCard}>
+            <Text style={styles.statEmoji}>🔥</Text>
+            <Text style={styles.statValue}>{newStreak}</Text>
+            <Text style={styles.statLabel}>day streak</Text>
+          </View>
+          <View style={[styles.statCard, styles.statCardHighlight]}>
+            <Text style={styles.statEmoji}>⭐</Text>
+            <Text style={styles.statValue}>{newBestScore.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>personal best</Text>
+          </View>
         </View>
 
         <View style={styles.breakdown}>
           <Text style={styles.breakdownTitle}>ROUND BREAKDOWN</Text>
           <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>🧠 Echo (Memory)</Text>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.roundDot, { backgroundColor: colors.orange }]} />
+              <Text style={styles.breakdownLabel}>Echo</Text>
+            </View>
             <Text style={styles.breakdownValue}>
               {echoScore !== null ? echoScore.toLocaleString() : '--'}
             </Text>
           </View>
           <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>⚡ Snap (Reflex)</Text>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.roundDot, { backgroundColor: colors.magenta }]} />
+              <Text style={styles.breakdownLabel}>Snap</Text>
+            </View>
             <Text style={styles.breakdownValue}>
               {snapScore !== null ? snapScore.toLocaleString() : '--'}
             </Text>
           </View>
-          <View style={styles.breakdownItem}>
-            <Text style={styles.breakdownLabel}>🎯 Lock (Focus)</Text>
+          <View style={[styles.breakdownItem, styles.breakdownItemLast]}>
+            <View style={styles.breakdownLeft}>
+              <View style={[styles.roundDot, { backgroundColor: colors.text }]} />
+              <Text style={styles.breakdownLabel}>Lock</Text>
+            </View>
             <Text style={styles.breakdownValue}>
               {lockScore !== null ? lockScore.toLocaleString() : '--'}
             </Text>
@@ -184,61 +222,85 @@ const styles = StyleSheet.create({
   difficultyNotification: {
     position: 'absolute',
     top: 60,
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.orange,
+    left: spacing.md,
+    right: spacing.md,
     zIndex: 100,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  difficultyGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  difficultyIcon: {
+    fontSize: 24,
+  },
+  difficultyContent: {
+    flex: 1,
+  },
+  difficultyLabel: {
+    fontSize: typography.sizes.xs,
+    fontWeight: '600',
+    color: colors.text,
+    opacity: 0.8,
+    letterSpacing: 1,
   },
   difficultyNotificationText: {
     fontSize: typography.sizes.md,
     fontWeight: '700',
-    color: colors.orange,
-    letterSpacing: 1,
+    color: colors.text,
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
   },
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 4,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   newBestBadge: {
-    backgroundColor: colors.orange,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 8,
   },
   newBestText: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.md,
     fontWeight: '700',
     color: colors.text,
+    letterSpacing: 1,
   },
   scoreContainer: {
     width: '100%',
-    paddingVertical: spacing.xxl,
+    paddingVertical: spacing.xl,
     borderRadius: borderRadius.xl,
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   scoreLabel: {
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.xs,
     fontWeight: '600',
     color: colors.text,
     opacity: 0.8,
     letterSpacing: 2,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   score: {
     fontSize: typography.sizes.display,
@@ -249,16 +311,41 @@ const styles = StyleSheet.create({
   stats: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: spacing.xl,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  statGap: {
-    width: spacing.md,
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  statCardHighlight: {
+    borderColor: colors.orange,
+  },
+  statEmoji: {
+    fontSize: 20,
+    marginBottom: spacing.xs,
+  },
+  statValue: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.display.fontWeight,
+    color: colors.text,
+  },
+  statLabel: {
+    fontSize: typography.sizes.xs,
+    color: colors.muted,
+    marginTop: spacing.xs,
   },
   breakdown: {
     width: '100%',
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
@@ -267,14 +354,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.muted,
     letterSpacing: 2,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   breakdownItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
+  },
+  breakdownItemLast: {
+    borderBottomWidth: 0,
+  },
+  breakdownLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  roundDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   breakdownLabel: {
     fontSize: typography.sizes.md,
@@ -286,9 +387,9 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   footer: {
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   button: {
     width: '100%',

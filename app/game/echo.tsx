@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  ViewStyle,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RoundShell, useRoundScore } from '../../src/components';
-import { colors, spacing, borderRadius } from '../../src/constants/theme';
+import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
 import { ECHO_CONFIGS, DifficultyLevel } from '../../src/constants/gameConfig';
 import { getDifficulty } from '../../src/utils/difficulty';
+import { lightImpact, mediumImpact } from '../../src/utils/haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -149,23 +152,39 @@ export default function EchoRoundScreen() {
     const isFeedback = feedbackCell?.index === index;
     const feedbackCorrect = feedbackCell?.correct;
     
-    let cellStyle = [styles.cell, { width: cellSize, height: cellSize }];
+    const cellStyles: ViewStyle[] = [
+      styles.cell, 
+      { width: cellSize, height: cellSize },
+    ];
     
     if (isActive) {
-      cellStyle.push(styles.cellActive as any);
+      cellStyles.push(styles.cellActive);
     } else if (isFeedback) {
-      cellStyle.push(feedbackCorrect ? styles.cellCorrect as any : styles.cellWrong as any);
+      cellStyles.push(feedbackCorrect ? styles.cellCorrect : styles.cellWrong);
     }
+
+    const handlePress = () => {
+      lightImpact();
+      handleCellPress(index);
+    };
 
     return (
       <TouchableOpacity
         key={index}
-        style={cellStyle}
-        onPress={() => handleCellPress(index)}
+        style={cellStyles}
+        onPress={handlePress}
         disabled={phase !== 'input'}
         activeOpacity={0.7}
       >
-        {isActive && <View style={styles.cellGlow} />}
+        {isActive && (
+          <LinearGradient
+            colors={[colors.orangeLight, colors.orange]}
+            style={styles.cellGlow}
+          />
+        )}
+        {isFeedback && feedbackCorrect && (
+          <View style={styles.cellSuccessRing} />
+        )}
       </TouchableOpacity>
     );
   };
@@ -205,6 +224,9 @@ export default function EchoRoundScreen() {
       <View style={styles.content}>
         <View style={styles.roundIndicator}>
           <Text style={styles.roundText}>Pattern #{round}</Text>
+          <View style={styles.difficultyBadge}>
+            <Text style={styles.difficultyText}>L{difficulty}</Text>
+          </View>
         </View>
         
         {renderGrid()}
@@ -231,15 +253,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   roundIndicator: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   roundText: {
-    fontSize: 14,
+    fontSize: typography.sizes.sm,
     color: colors.muted,
     letterSpacing: 1,
+  },
+  difficultyBadge: {
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.orange,
+  },
+  difficultyText: {
+    fontSize: typography.sizes.xs,
+    color: colors.orange,
+    fontWeight: '700',
   },
   grid: {
     flexDirection: 'row',
@@ -258,32 +296,57 @@ const styles = StyleSheet.create({
   },
   cellActive: {
     backgroundColor: colors.orange,
-    borderColor: colors.orange,
+    borderColor: colors.orangeLight,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 8,
   },
   cellCorrect: {
     backgroundColor: colors.success,
     borderColor: colors.success,
+    shadowColor: colors.success,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cellWrong: {
     backgroundColor: colors.error,
     borderColor: colors.error,
+    shadowColor: colors.error,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cellGlow: {
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: colors.orangeLight,
+    borderRadius: borderRadius.md - 2,
+  },
+  cellSuccessRing: {
+    position: 'absolute',
+    width: '80%',
+    height: '80%',
+    borderRadius: borderRadius.md,
+    borderWidth: 3,
+    borderColor: colors.text,
     opacity: 0.5,
   },
   progressDots: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xl,
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -295,5 +358,10 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: colors.orangeLight,
     borderColor: colors.orange,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

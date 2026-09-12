@@ -8,10 +8,12 @@ import {
   Animated,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RoundShell, useRoundScore } from '../../src/components';
 import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
 import { SNAP_CONFIGS, DifficultyLevel } from '../../src/constants/gameConfig';
 import { getDifficulty } from '../../src/utils/difficulty';
+import { lightImpact, mediumImpact } from '../../src/utils/haptics';
 
 const { width, height } = Dimensions.get('window');
 const PLAY_AREA_HEIGHT = height * 0.6;
@@ -132,9 +134,11 @@ export default function SnapRoundScreen() {
 
   const handleTargetPress = useCallback((target: Target) => {
     if (target.isDistractor) {
+      mediumImpact();
       penalize(config.penaltyPerDistractor);
       setMisses(m => m + 1);
     } else {
+      lightImpact();
       const timeSinceSpawn = Date.now() - target.createdAt;
       const speedBonus = Math.max(0, Math.floor((config.targetLifetimeMs - timeSinceSpawn) / 100) * 5);
       addScore(config.pointsPerTarget + speedBonus);
@@ -193,6 +197,9 @@ export default function SnapRoundScreen() {
             <Text style={styles.statValue}>{hits}</Text>
             <Text style={styles.statLabel}>HITS</Text>
           </View>
+          <View style={styles.difficultyBadge}>
+            <Text style={styles.difficultyText}>L{difficulty}</Text>
+          </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{accuracy}%</Text>
             <Text style={styles.statLabel}>ACCURACY</Text>
@@ -214,15 +221,21 @@ export default function SnapRoundScreen() {
               ]}
             >
               <TouchableOpacity
-                style={[
-                  styles.target,
-                  target.isDistractor ? styles.distractor : styles.realTarget,
-                ]}
+                style={styles.targetTouch}
                 onPress={() => handleTargetPress(target)}
                 activeOpacity={0.7}
               >
-                {!target.isDistractor && (
-                  <View style={styles.targetInner} />
+                {target.isDistractor ? (
+                  <View style={styles.distractor}>
+                    <View style={styles.distractorInner} />
+                  </View>
+                ) : (
+                  <LinearGradient
+                    colors={[colors.orangeLight, colors.orange, colors.orangeDark]}
+                    style={styles.realTarget}
+                  >
+                    <View style={styles.targetInner} />
+                  </LinearGradient>
                 )}
               </TouchableOpacity>
             </Animated.View>
@@ -253,16 +266,18 @@ export default function SnapRoundScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xl,
-    paddingVertical: spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   statItem: {
     alignItems: 'center',
+    minWidth: 60,
   },
   statValue: {
     fontSize: typography.sizes.xl,
@@ -274,10 +289,23 @@ const styles = StyleSheet.create({
     color: colors.muted,
     letterSpacing: 1,
   },
+  difficultyBadge: {
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.magenta,
+  },
+  difficultyText: {
+    fontSize: typography.sizes.xs,
+    color: colors.magenta,
+    fontWeight: '700',
+  },
   playArea: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     position: 'relative',
     overflow: 'hidden',
@@ -287,31 +315,45 @@ const styles = StyleSheet.create({
     width: TARGET_SIZE,
     height: TARGET_SIZE,
   },
-  target: {
+  targetTouch: {
+    width: TARGET_SIZE + 10,
+    height: TARGET_SIZE + 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  realTarget: {
     width: TARGET_SIZE,
     height: TARGET_SIZE,
     borderRadius: TARGET_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  realTarget: {
-    backgroundColor: colors.orange,
     shadowColor: colors.orange,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.8,
     shadowRadius: 15,
-    elevation: 8,
+    elevation: 10,
   },
   distractor: {
-    backgroundColor: colors.mutedDark,
+    width: TARGET_SIZE,
+    height: TARGET_SIZE,
+    borderRadius: TARGET_SIZE / 2,
+    backgroundColor: colors.card,
     borderWidth: 2,
-    borderColor: colors.muted,
+    borderColor: colors.mutedDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  distractorInner: {
+    width: TARGET_SIZE * 0.3,
+    height: TARGET_SIZE * 0.3,
+    borderRadius: TARGET_SIZE * 0.15,
+    backgroundColor: colors.mutedDark,
   },
   targetInner: {
-    width: TARGET_SIZE * 0.4,
-    height: TARGET_SIZE * 0.4,
-    borderRadius: TARGET_SIZE * 0.2,
-    backgroundColor: colors.orangeLight,
+    width: TARGET_SIZE * 0.35,
+    height: TARGET_SIZE * 0.35,
+    borderRadius: TARGET_SIZE * 0.175,
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   waitingContainer: {
     flex: 1,
@@ -326,7 +368,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.xl,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   legendItem: {
     flexDirection: 'row',
@@ -334,17 +376,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   legendDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   legendTarget: {
     backgroundColor: colors.orange,
+    shadowColor: colors.orange,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
   },
   legendDistractor: {
-    backgroundColor: colors.mutedDark,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.muted,
+    borderColor: colors.mutedDark,
   },
   legendText: {
     fontSize: typography.sizes.sm,

@@ -8,6 +8,7 @@ import {
   Animated,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RoundShell, useRoundScore } from '../../src/components';
 import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
 import {
@@ -21,6 +22,7 @@ import {
   LockRule,
 } from '../../src/constants/gameConfig';
 import { getDifficulty, adjustDifficultyAfterGame } from '../../src/utils/difficulty';
+import { lightImpact, mediumImpact } from '../../src/utils/haptics';
 
 const { width, height } = Dimensions.get('window');
 const PLAY_AREA_HEIGHT = height * 0.55;
@@ -217,11 +219,13 @@ export default function LockRoundScreen() {
     setShapes(prev => prev.filter(s => s.id !== shape.id));
     
     if (shape.isTarget) {
+      lightImpact();
       const timeSinceSpawn = Date.now() - shape.createdAt;
       const speedBonus = Math.max(0, Math.floor((config.fallDurationMs - timeSinceSpawn) / 200) * 10);
       addScore(config.pointsPerCorrect + speedBonus);
       setCorrect(c => c + 1);
     } else {
+      mediumImpact();
       penalize(config.penaltyPerWrong);
       setWrong(w => w + 1);
     }
@@ -295,6 +299,9 @@ export default function LockRoundScreen() {
             <Text style={styles.statValue}>{correct}</Text>
             <Text style={styles.statLabel}>CORRECT</Text>
           </View>
+          <View style={styles.difficultyBadge}>
+            <Text style={styles.difficultyText}>L{difficulty}</Text>
+          </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{accuracy}%</Text>
             <Text style={styles.statLabel}>ACCURACY</Text>
@@ -340,16 +347,21 @@ export default function LockRoundScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   ruleContainer: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.magenta,
+    shadowColor: colors.magenta,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   ruleLabel: {
     fontSize: typography.sizes.xs,
@@ -358,19 +370,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   ruleText: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     fontWeight: typography.display.fontWeight,
     color: colors.magenta,
     letterSpacing: 1,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.xl,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
   },
   statItem: {
     alignItems: 'center',
+    minWidth: 60,
   },
   statValue: {
     fontSize: typography.sizes.xl,
@@ -382,10 +396,23 @@ const styles = StyleSheet.create({
     color: colors.muted,
     letterSpacing: 1,
   },
+  difficultyBadge: {
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.text,
+  },
+  difficultyText: {
+    fontSize: typography.sizes.xs,
+    color: colors.text,
+    fontWeight: '700',
+  },
   playArea: {
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
     position: 'relative',
     overflow: 'hidden',
@@ -408,8 +435,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
-    backgroundColor: 'rgba(255, 45, 149, 0.1)',
+    height: 50,
+    backgroundColor: 'rgba(255, 45, 149, 0.15)',
     borderTopWidth: 2,
     borderTopColor: colors.magenta,
     alignItems: 'center',
@@ -419,6 +446,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     color: colors.magenta,
     letterSpacing: 2,
-    opacity: 0.7,
+    fontWeight: '700',
   },
 });

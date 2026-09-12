@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
+import { lightImpact } from '../src/utils/haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ export default function OnboardingScreen() {
   const { completeOnboarding } = useGameState();
 
   const handleContinue = async () => {
+    lightImpact();
     if (currentSlide < SLIDES.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
@@ -42,6 +44,7 @@ export default function OnboardingScreen() {
   };
 
   const handleGuestEntry = async () => {
+    lightImpact();
     await completeOnboarding();
     router.replace('/home');
   };

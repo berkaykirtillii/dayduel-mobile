@@ -1,8 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Vibration } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { ROUND_DURATION } from '../constants/gameConfig';
+import { 
+  warningNotification, 
+  heavyImpact, 
+  successNotification, 
+  errorNotification 
+} from '../utils/haptics';
 
 export interface RoundShellProps {
   roundNumber: 1 | 2 | 3;
@@ -43,7 +50,11 @@ export function RoundShell({
       setTimeLeft(newTime);
 
       if (newTime === 10) {
-        Vibration.vibrate(100);
+        warningNotification();
+      }
+      
+      if (newTime === 3) {
+        heavyImpact();
       }
 
       if (newTime <= 0 && !hasEndedRef.current) {
@@ -67,39 +78,53 @@ export function RoundShell({
   const progress = timeLeft / ROUND_DURATION;
   const isLowTime = timeLeft <= 10;
 
+  const timerGradientColors = isLowTime 
+    ? [colors.error, '#CC3333'] as const
+    : [colors.card, colors.cardBorder] as const;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.roundInfo}>
-          <Text style={styles.roundLabel}>ROUND {roundNumber}</Text>
+          <View style={styles.roundBadge}>
+            <Text style={styles.roundLabel}>{roundNumber}/3</Text>
+          </View>
           <Text style={[styles.roundName, { color: roundColor }]}>{roundName}</Text>
         </View>
         <View style={styles.headerRight}>
           {showScore && (
             <View style={styles.scoreContainer}>
-              <Text style={styles.scoreLabel}>SCORE</Text>
-              <Text style={styles.scoreValue}>{score}</Text>
+              <Text style={styles.scoreValue}>{score.toLocaleString()}</Text>
+              <Text style={styles.scoreLabel}>PTS</Text>
             </View>
           )}
-          <View style={[styles.timer, isLowTime && styles.timerLow]}>
+          <LinearGradient
+            colors={timerGradientColors}
+            style={[styles.timer, isLowTime && styles.timerLow]}
+          >
             <Text style={[styles.timerText, isLowTime && styles.timerTextLow]}>
-              {timeLeft}s
+              {timeLeft}
             </Text>
-          </View>
+          </LinearGradient>
         </View>
       </View>
 
-      <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${progress * 100}%`, backgroundColor: roundColor },
-          ]}
-        />
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <LinearGradient
+            colors={[roundColor, `${roundColor}99`]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[styles.progressFill, { width: `${progress * 100}%` }]}
+          />
+        </View>
+        {isLowTime && (
+          <View style={styles.progressPulse} />
+        )}
       </View>
 
       {instruction && (
-        <View style={styles.instructionContainer}>
+        <View style={[styles.instructionContainer, { borderLeftColor: roundColor }]}>
           <Text style={styles.instruction}>{instruction}</Text>
         </View>
       )}
@@ -121,7 +146,7 @@ export function useRoundScore(initialScore = 0) {
     setCombo(prev => prev + 1);
     setFeedback('correct');
     setTimeout(() => setFeedback(null), 200);
-    Vibration.vibrate(50);
+    successNotification();
     return finalPoints;
   }, [combo]);
 
@@ -130,7 +155,7 @@ export function useRoundScore(initialScore = 0) {
     setCombo(0);
     setFeedback('wrong');
     setTimeout(() => setFeedback(null), 300);
-    Vibration.vibrate([0, 100, 50, 100]);
+    errorNotification();
   }, []);
 
   const resetCombo = useCallback(() => {
@@ -149,17 +174,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  roundInfo: {},
+  roundInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  roundBadge: {
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
   roundLabel: {
     fontSize: typography.sizes.xs,
+    fontWeight: '700',
     color: colors.muted,
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
   roundName: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.display.fontWeight,
     letterSpacing: 2,
   },
@@ -169,56 +207,80 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   scoreContainer: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.xs,
   },
   scoreLabel: {
     fontSize: typography.sizes.xs,
     color: colors.muted,
-    letterSpacing: 1,
+    fontWeight: '600',
   },
   scoreValue: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
   },
   timer: {
-    backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
-    minWidth: 60,
+    minWidth: 52,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   timerLow: {
-    backgroundColor: colors.error,
+    shadowColor: colors.error,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 6,
   },
   timerText: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
   },
   timerTextLow: {
     color: colors.text,
   },
+  progressContainer: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xs,
+    position: 'relative',
+  },
   progressBar: {
-    height: 4,
+    height: 6,
     backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
-    borderRadius: 2,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+  progressPulse: {
+    position: 'absolute',
+    right: 0,
+    top: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.error,
   },
   instructionContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.sm,
+    borderLeftWidth: 3,
   },
   instruction: {
-    fontSize: typography.sizes.md,
-    color: colors.muted,
-    textAlign: 'center',
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'left',
   },
   content: {
     flex: 1,
