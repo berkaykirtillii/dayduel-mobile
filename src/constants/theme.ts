@@ -52,13 +52,24 @@ export const borderRadius = {
 } as const;
 
 export const typography = {
+  // Font families
+  fonts: {
+    display: 'BarlowCondensed_800ExtraBold',
+    displayBold: 'BarlowCondensed_700Bold',
+    body: 'Inter_400Regular',
+    bodyMedium: 'Inter_500Medium',
+    bodySemiBold: 'Inter_600SemiBold',
+    bodyBold: 'Inter_700Bold',
+  },
   // Bold condensed display for scores/CTAs
   display: {
+    fontFamily: 'BarlowCondensed_800ExtraBold',
     fontWeight: '800' as const,
     letterSpacing: -0.5,
   },
   // System sans for UI
   body: {
+    fontFamily: 'Inter_400Regular',
     fontWeight: '400' as const,
   },
   // Font sizes
@@ -71,6 +82,7 @@ export const typography = {
     xxl: 32,
     xxxl: 48,
     display: 64,
+    hero: 108,
   },
 } as const;
 

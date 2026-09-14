@@ -63,11 +63,18 @@ export async function getGameState(): Promise<GameState> {
     ]);
 
     const today = getTodayString();
+    const yesterday = getYesterdayString();
     const isNewDay = lastPlayed !== today;
+
+    let currentStreak = parseInt(streak || '0', 10);
+    if (lastPlayed !== null && lastPlayed !== today && lastPlayed !== yesterday) {
+      currentStreak = 0;
+      await AsyncStorage.setItem(STORAGE_KEYS.STREAK, '0');
+    }
 
     return {
       todayScore: isNewDay ? 0 : parseInt(todayScore || '0', 10),
-      streak: parseInt(streak || '0', 10),
+      streak: currentStreak,
       bestScore: parseInt(bestScore || '0', 10),
       lastPlayed,
       onboardingComplete: onboardingComplete === 'true',

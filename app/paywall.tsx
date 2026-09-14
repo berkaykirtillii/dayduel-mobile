@@ -1,35 +1,32 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
-const FEATURES = [
-  { 
-    icon: '♾️', 
-    title: 'Unlimited Rematch',
-    description: 'Play as many duels as you want, every day',
-    highlight: true,
+const FREE_FEATURES = [
+  '1 duel / day',
+  'Basic Echo·Snap·Lock',
+  'No rematch',
+];
+
+const PRO_FEATURES = [
+  'Unlimited rematch',
+  'Streak shield',
+  'Harder Lock rounds',
+];
+
+const PRO_BENEFITS = [
+  {
+    icon: '♾️',
+    title: 'Unlimited rematch',
+    description: "Replay today's duel anytime — no wait.",
   },
-  { 
-    icon: '🛡️', 
-    title: 'Streak Shield',
-    description: 'Miss a day? Your streak stays protected',
-    highlight: true,
-  },
-  { 
-    icon: '🧘', 
-    title: 'Deeper Focus Mode',
-    description: 'Extended 5-min sessions for serious training',
-    highlight: false,
-  },
-  { 
-    icon: '📈', 
-    title: 'Performance Insights',
-    description: 'Track your cognitive improvement over time',
-    highlight: false,
+  {
+    icon: '🛡️',
+    title: 'Streak shield',
+    description: 'Miss a day? Your streak stays lit once.',
   },
 ];
 
@@ -37,13 +34,11 @@ export default function PaywallScreen() {
   const { upgradeToPro } = useGameState();
 
   const handlePurchase = async () => {
-    // TODO: Integrate with in-app purchases
     await upgradeToPro();
     router.back();
   };
 
   const handleRestore = () => {
-    // TODO: Implement restore purchases
     console.log('Restore purchases');
   };
 
@@ -54,80 +49,73 @@ export default function PaywallScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerPlaceholder} />
-        <Text style={styles.headerTitle}>GO PRO</Text>
-        <Button title="✕" onPress={handleClose} variant="ghost" />
+        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+          <Text style={styles.closeIcon}>✕</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <View style={styles.heroSection}>
-            <LinearGradient
-              colors={[colors.orange, colors.orangeDark]}
-              style={styles.iconContainer}
-            >
-              <Text style={styles.icon}>⚡</Text>
-            </LinearGradient>
-            <Text style={styles.heroTitle}>UNLOCK YOUR</Text>
-            <Text style={styles.heroTitleAccent}>FULL POTENTIAL</Text>
-            <Text style={styles.heroSubtitle}>
-              Train without limits. Build unstoppable streaks.
-            </Text>
+            <Text style={styles.heroTitle}>KEEP THE</Text>
+            <Text style={styles.heroTitleAccent}>STREAK HOT</Text>
           </View>
 
-          <View style={styles.features}>
-            {FEATURES.map((feature, index) => (
-              <View 
-                key={index} 
-                style={[
-                  styles.featureItem,
-                  feature.highlight && styles.featureItemHighlight
-                ]}
-              >
-                <View style={styles.featureIconContainer}>
-                  <Text style={styles.featureIcon}>{feature.icon}</Text>
+          <View style={styles.compareCards}>
+            <View style={styles.freeCard}>
+              <Text style={styles.cardTitle}>FREE</Text>
+              <View style={styles.featureList}>
+                {FREE_FEATURES.map((feature, index) => (
+                  <Text key={index} style={styles.featureText}>· {feature}</Text>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.proCard}>
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>BEST VALUE</Text>
+              </View>
+              <Text style={styles.proCardTitle}>PRO</Text>
+              <View style={styles.featureList}>
+                {PRO_FEATURES.map((feature, index) => (
+                  <Text key={index} style={styles.proFeatureText}>· {feature}</Text>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.benefits}>
+            {PRO_BENEFITS.map((benefit, index) => (
+              <View key={index} style={styles.benefitItem}>
+                <View style={styles.benefitIconContainer}>
+                  <Text style={styles.benefitIcon}>{benefit.icon}</Text>
                 </View>
-                <View style={styles.featureContent}>
-                  <Text style={[
-                    styles.featureTitle,
-                    feature.highlight && styles.featureTitleHighlight
-                  ]}>
-                    {feature.title}
-                  </Text>
-                  <Text style={styles.featureDescription}>{feature.description}</Text>
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>{benefit.title}</Text>
+                  <Text style={styles.benefitDescription}>{benefit.description}</Text>
                 </View>
               </View>
             ))}
           </View>
 
-          <View style={styles.priceCard}>
-            <Text style={styles.priceLabel}>PRO SUBSCRIPTION</Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>$4.99</Text>
-              <Text style={styles.pricePeriod}>/month</Text>
-            </View>
-            <View style={styles.trialBadge}>
-              <Text style={styles.trialText}>7-DAY FREE TRIAL</Text>
-            </View>
+          <View style={styles.priceSection}>
+            <Text style={styles.price}>$4.99</Text>
+            <Text style={styles.pricePeriod}>/mo</Text>
           </View>
+          <Text style={styles.cancelText}>Cancel anytime · Pro unlocks all heat</Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <Button
-          title="START FREE TRIAL"
+          title="GO PRO"
           onPress={handlePurchase}
           size="lg"
           style={styles.button}
         />
-        <Button
-          title="Restore Purchases"
-          onPress={handleRestore}
-          variant="ghost"
-        />
-        <Text style={styles.terms}>
-          Cancel anytime • Billed after trial • Terms apply
-        </Text>
+        <TouchableOpacity onPress={handleRestore}>
+          <Text style={styles.restoreText}>Restore purchases</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -140,19 +128,21 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  headerPlaceholder: {
-    width: 44,
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.display.fontWeight,
-    color: colors.orange,
-    letterSpacing: 3,
+  closeIcon: {
+    fontSize: 16,
+    color: colors.muted,
   },
   scrollView: {
     flex: 1,
@@ -165,50 +155,99 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   heroSection: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  iconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    shadowColor: colors.orange,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  icon: {
-    fontSize: 44,
+    alignItems: 'flex-start',
+    marginBottom: spacing.xl,
   },
   heroTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.display.fontWeight,
-    color: colors.muted,
-    letterSpacing: 3,
-  },
-  heroTitleAccent: {
     fontSize: typography.sizes.xxl,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 2,
-    marginBottom: spacing.sm,
   },
-  heroSubtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  heroTitleAccent: {
+    fontSize: typography.sizes.xxl,
+    fontFamily: typography.fonts.display,
+    fontWeight: typography.display.fontWeight,
+    color: colors.magenta,
+    letterSpacing: 2,
   },
-  features: {
-    width: '100%',
-    gap: spacing.sm,
+  compareCards: {
+    flexDirection: 'row',
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  featureItem: {
+  freeCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  cardTitle: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.bodySemiBold,
+    fontWeight: '600',
+    color: colors.muted,
+    letterSpacing: 2,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  featureList: {
+    gap: spacing.sm,
+  },
+  featureText: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.body,
+    color: colors.muted,
+  },
+  proCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.magenta,
+    position: 'relative',
+  },
+  bestValueBadge: {
+    position: 'absolute',
+    top: -10,
+    left: '50%',
+    transform: [{ translateX: -40 }],
+    backgroundColor: colors.magenta,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  bestValueText: {
+    fontSize: 9,
+    fontFamily: typography.fonts.bodySemiBold,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 1,
+  },
+  proCardTitle: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.bodySemiBold,
+    fontWeight: '600',
+    color: colors.magenta,
+    letterSpacing: 2,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  proFeatureText: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.body,
+    color: colors.text,
+  },
+  benefits: {
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
@@ -217,80 +256,57 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  featureItemHighlight: {
-    borderColor: colors.orange,
-    backgroundColor: 'rgba(255, 90, 31, 0.05)',
-  },
-  featureIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  benefitIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
-  featureIcon: {
-    fontSize: 22,
+  benefitIcon: {
+    fontSize: 20,
   },
-  featureContent: {
+  benefitContent: {
     flex: 1,
   },
-  featureTitle: {
+  benefitTitle: {
     fontSize: typography.sizes.md,
-    fontWeight: '700',
+    fontFamily: typography.fonts.bodySemiBold,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: 2,
   },
-  featureTitleHighlight: {
-    color: colors.orange,
-  },
-  featureDescription: {
+  benefitDescription: {
     fontSize: typography.sizes.sm,
+    fontFamily: typography.fonts.body,
     color: colors.muted,
   },
-  priceCard: {
-    width: '100%',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.orange,
-  },
-  priceLabel: {
-    fontSize: typography.sizes.xs,
-    fontWeight: '700',
-    color: colors.muted,
-    letterSpacing: 2,
-    marginBottom: spacing.sm,
-  },
-  priceRow: {
+  priceSection: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
   },
   price: {
     fontSize: typography.sizes.xxxl,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
-    color: colors.orange,
+    color: colors.text,
   },
   pricePeriod: {
     fontSize: typography.sizes.lg,
+    fontFamily: typography.fonts.body,
     color: colors.muted,
     marginLeft: spacing.xs,
   },
-  trialBadge: {
-    backgroundColor: colors.orange,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    marginTop: spacing.md,
-  },
-  trialText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: '700',
-    color: colors.text,
-    letterSpacing: 1,
+  cancelText: {
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fonts.body,
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
   },
   footer: {
     paddingHorizontal: spacing.lg,
@@ -302,9 +318,9 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
   },
-  terms: {
-    fontSize: typography.sizes.xs,
-    color: colors.mutedDark,
-    textAlign: 'center',
+  restoreText: {
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fonts.body,
+    color: colors.muted,
   },
 });
