@@ -43,6 +43,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.logo}>DAYDUEL</Text>
+          <Text style={styles.tagline}>5 MIN. RECLAIM YOUR FOCUS.</Text>
         </View>
         <TouchableOpacity 
           onPress={handleOpenProfile}
@@ -112,6 +113,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 3,
+  },
+  tagline: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.bodySemiBold,
+    color: colors.muted,
+    letterSpacing: 2,
+    marginTop: 4,
   },
   profileButton: {
     minWidth: 44,

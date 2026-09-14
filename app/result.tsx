@@ -1,11 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Animated, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { adjustDifficultyAfterGame } from '../src/utils/difficulty';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
+
+const ROUNDS = [
+  { id: 'echo', name: 'ECHO', subtitle: 'Memory heat', color: colors.orange, number: 1 },
+  { id: 'snap', name: 'SNAP', subtitle: 'Reflex heat', color: colors.magenta, number: 2 },
+  { id: 'lock', name: 'LOCK', subtitle: 'Focus heat', color: colors.orange, number: 3 },
+];
 
 export default function ResultScreen() {
   const params = useLocalSearchParams<{
@@ -21,6 +27,8 @@ export default function ResultScreen() {
   const snapScore = params.snapScore ? parseInt(params.snapScore, 10) : null;
   const lockScore = params.lockScore ? parseInt(params.lockScore, 10) : null;
   const duelId = params.duelId || '';
+
+  const roundScores = [echoScore, snapScore, lockScore];
 
   const { submitScore, bestScore, streak, checkCanPlay, isPro, devUnlimited } = useGameState();
   const [newStreak, setNewStreak] = useState(streak);
@@ -82,15 +90,6 @@ export default function ResultScreen() {
     router.replace('/home');
   };
 
-  const handlePlayAgain = async () => {
-    const canPlay = await checkCanPlay();
-    if (canPlay) {
-      router.replace('/game');
-    } else {
-      router.push('/paywall');
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -131,33 +130,24 @@ export default function ResultScreen() {
 
           <View style={styles.breakdown}>
             <Text style={styles.breakdownTitle}>ROUND BREAKDOWN</Text>
-            <View style={styles.breakdownItem}>
-              <View style={styles.breakdownLeft}>
-                <View style={[styles.roundDot, { backgroundColor: colors.orange }]} />
-                <Text style={styles.breakdownLabel}>Echo</Text>
+            {ROUNDS.map((round, index) => (
+              <View key={round.id} style={styles.roundCard}>
+                <View style={styles.roundLeft}>
+                  <View style={[styles.roundNumber, { borderColor: round.color }]}>
+                    <Text style={[styles.roundNumberText, { color: round.color }]}>
+                      {round.number}
+                    </Text>
+                  </View>
+                  <View style={styles.roundInfo}>
+                    <Text style={styles.roundName}>{round.name}</Text>
+                    <Text style={styles.roundSubtitle}>{round.subtitle}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.roundScore, { color: round.color }]}>
+                  {roundScores[index] !== null ? roundScores[index]!.toLocaleString() : '--'}
+                </Text>
               </View>
-              <Text style={[styles.breakdownValue, { color: colors.orange }]}>
-                {echoScore !== null ? echoScore.toLocaleString() : '--'}
-              </Text>
-            </View>
-            <View style={styles.breakdownItem}>
-              <View style={styles.breakdownLeft}>
-                <View style={[styles.roundDot, { backgroundColor: colors.magenta }]} />
-                <Text style={styles.breakdownLabel}>Snap</Text>
-              </View>
-              <Text style={[styles.breakdownValue, { color: colors.magenta }]}>
-                {snapScore !== null ? snapScore.toLocaleString() : '--'}
-              </Text>
-            </View>
-            <View style={[styles.breakdownItem, styles.breakdownItemLast]}>
-              <View style={styles.breakdownLeft}>
-                <View style={[styles.roundDot, { backgroundColor: colors.text }]} />
-                <Text style={styles.breakdownLabel}>Lock</Text>
-              </View>
-              <Text style={styles.breakdownValue}>
-                {lockScore !== null ? lockScore.toLocaleString() : '--'}
-              </Text>
-            </View>
+            ))}
           </View>
         </Animated.View>
       </ScrollView>
@@ -194,7 +184,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   headerLabel: {
     fontSize: typography.sizes.lg,
@@ -261,11 +251,6 @@ const styles = StyleSheet.create({
   },
   breakdown: {
     width: '100%',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     marginTop: spacing.md,
   },
   breakdownTitle: {
@@ -276,38 +261,55 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: spacing.md,
   },
-  breakdownItem: {
+  roundCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  breakdownItemLast: {
-    borderBottomWidth: 0,
-  },
-  breakdownLeft: {
+  roundLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  roundDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  roundNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  breakdownLabel: {
+  roundNumberText: {
     fontSize: typography.sizes.md,
-    fontFamily: typography.fonts.bodySemiBold,
-    fontWeight: '600',
-    color: colors.text,
+    fontFamily: typography.fonts.display,
+    fontWeight: typography.display.fontWeight,
   },
-  breakdownValue: {
-    fontSize: typography.sizes.xl,
+  roundInfo: {
+    gap: 2,
+  },
+  roundName: {
+    fontSize: typography.sizes.md,
     fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
+    letterSpacing: 1,
+  },
+  roundSubtitle: {
+    fontSize: typography.sizes.xs,
+    fontFamily: typography.fonts.body,
+    color: colors.muted,
+  },
+  roundScore: {
+    fontSize: typography.sizes.xxl,
+    fontFamily: typography.fonts.display,
+    fontWeight: typography.display.fontWeight,
   },
   footer: {
     paddingHorizontal: spacing.lg,
