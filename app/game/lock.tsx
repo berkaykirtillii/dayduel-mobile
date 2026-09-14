@@ -7,6 +7,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
+import Svg, { Polygon } from 'react-native-svg';
 import { router, useLocalSearchParams } from 'expo-router';
 import { RoundShell, useRoundScore } from '../../src/components';
 import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
@@ -85,20 +86,18 @@ const ShapeComponent = ({
         />
       );
     case 'triangle':
+      const triangleHeight = size * 0.866;
+      const points = `${size / 2},0 ${size},${triangleHeight} 0,${triangleHeight}`;
       return (
-        <View
-          style={{
-            width: 0,
-            height: 0,
-            borderLeftWidth: size / 2,
-            borderRightWidth: size / 2,
-            borderBottomWidth: size * 0.866,
-            borderLeftColor: 'transparent',
-            borderRightColor: 'transparent',
-            borderBottomColor: colorValue,
-            opacity,
-          }}
-        />
+        <Svg width={size} height={triangleHeight} style={{ opacity }}>
+          <Polygon
+            points={points}
+            fill={fillColor}
+            stroke={borderColor}
+            strokeWidth={borderWidth}
+            strokeDasharray={isTarget ? undefined : '6,4'}
+          />
+        </Svg>
       );
     case 'diamond':
       return (
