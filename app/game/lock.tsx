@@ -22,6 +22,12 @@ import {
   LockRule,
 } from '../../src/constants/gameConfig';
 import { getDifficulty } from '../../src/utils/difficulty';
+import {
+  createSessionDifficultyState,
+  updateSessionDifficulty,
+  getLockConfigForSession,
+  SessionDifficultyState,
+} from '../../src/utils/sessionDifficulty';
 
 const { width, height } = Dimensions.get('window');
 const PLAY_AREA_HEIGHT = height * 0.55;
@@ -143,12 +149,14 @@ export default function LockRoundScreen() {
   const spawnIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shapeIdRef = useRef(0);
   const isGameActiveRef = useRef(true);
+  const sessionDifficultyRef = useRef<SessionDifficultyState | null>(null);
 
   useEffect(() => {
     const init = async () => {
       const diff = await getDifficulty();
       setDifficulty(diff);
       setConfig(LOCK_CONFIGS[diff]);
+      sessionDifficultyRef.current = createSessionDifficultyState(diff, 1, Math.min(diff + 2, 5) as DifficultyLevel);
       const randomRule = LOCK_RULES[Math.floor(Math.random() * LOCK_RULES.length)];
       setRule(randomRule);
     };
@@ -175,17 +183,28 @@ export default function LockRoundScreen() {
     const padding = SHAPE_SIZE / 2 + 10;
     const x = padding + Math.random() * (width - spacing.lg * 2 - padding * 2);
     
-    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+    const forceTarget = Math.random() < config.targetRatio;
+    
+    let shape: Shape;
+    let color: ShapeColor;
     const colorKeys = Object.keys(SHAPE_COLORS) as ShapeColor[];
     
-    let color: ShapeColor;
-    if (Math.random() < 0.4) {
-      if (rule.color) {
+    if (forceTarget) {
+      if (rule.shape && rule.color) {
+        shape = rule.shape;
+        color = rule.color;
+      } else if (rule.shape) {
+        shape = rule.shape;
+        color = colorKeys[Math.floor(Math.random() * colorKeys.length)];
+      } else if (rule.color) {
+        shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
         color = rule.color;
       } else {
+        shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
         color = colorKeys[Math.floor(Math.random() * colorKeys.length)];
       }
     } else {
+      shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
       color = colorKeys[Math.floor(Math.random() * colorKeys.length)];
     }
     
@@ -224,6 +243,14 @@ export default function LockRoundScreen() {
   const handleShapePress = useCallback((shape: FallingShape) => {
     setShapes(prev => prev.filter(s => s.id !== shape.id));
     
+    const isCorrect = shape.isTarget;
+    
+    if (sessionDifficultyRef.current) {
+      sessionDifficultyRef.current = updateSessionDifficulty(sessionDifficultyRef.current, isCorrect);
+      const newConfig = getLockConfigForSession(difficulty, sessionDifficultyRef.current.currentLevel);
+      setConfig(prev => ({ ...prev, ...newConfig }));
+    }
+    
     if (shape.isTarget) {
       const timeSinceSpawn = Date.now() - shape.createdAt;
       const speedBonus = Math.max(0, Math.floor((config.fallDurationMs - timeSinceSpawn) / 200) * 10);
@@ -233,7 +260,7 @@ export default function LockRoundScreen() {
       penalize(config.penaltyPerWrong);
       setWrong(w => w + 1);
     }
-  }, [config, addScore, penalize]);
+  }, [config, difficulty, addScore, penalize]);
 
   useEffect(() => {
     if (!config || !rule) return;

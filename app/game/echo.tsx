@@ -12,6 +12,12 @@ import { RoundShell, useRoundScore } from '../../src/components';
 import { colors, spacing, borderRadius } from '../../src/constants/theme';
 import { ECHO_CONFIGS, DifficultyLevel } from '../../src/constants/gameConfig';
 import { getDifficulty } from '../../src/utils/difficulty';
+import {
+  createSessionDifficultyState,
+  updateSessionDifficulty,
+  getEchoConfigForSession,
+  SessionDifficultyState,
+} from '../../src/utils/sessionDifficulty';
 
 const { width } = Dimensions.get('window');
 
@@ -35,12 +41,14 @@ export default function EchoRoundScreen() {
   const { score, addScore, penalize, feedback } = useRoundScore();
   const isInitializedRef = useRef(false);
   const showingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionDifficultyRef = useRef<SessionDifficultyState | null>(null);
 
   useEffect(() => {
     const init = async () => {
       const diff = await getDifficulty();
       setDifficulty(diff);
       setConfig(ECHO_CONFIGS[diff]);
+      sessionDifficultyRef.current = createSessionDifficultyState(diff, 1, Math.min(diff + 2, 5) as DifficultyLevel);
     };
     init();
   }, []);
@@ -103,6 +111,12 @@ export default function EchoRoundScreen() {
     setFeedbackCell({ index, correct: isCorrect });
     setTimeout(() => setFeedbackCell(null), 150);
 
+    if (sessionDifficultyRef.current) {
+      sessionDifficultyRef.current = updateSessionDifficulty(sessionDifficultyRef.current, isCorrect);
+      const newConfig = getEchoConfigForSession(difficulty, sessionDifficultyRef.current.currentLevel);
+      setConfig(newConfig);
+    }
+
     if (isCorrect) {
       const newInput = [...playerInput, index];
       setPlayerInput(newInput);
@@ -127,7 +141,7 @@ export default function EchoRoundScreen() {
         startNewSequence();
       }, 800);
     }
-  }, [phase, playerInput, sequence, config, addScore, penalize, startNewSequence]);
+  }, [phase, playerInput, sequence, config, difficulty, addScore, penalize, startNewSequence]);
 
   const handleTimeUp = useCallback(() => {
     const newTotalScore = previousScore + score;

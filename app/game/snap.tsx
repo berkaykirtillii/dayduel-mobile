@@ -12,6 +12,12 @@ import { RoundShell, useRoundScore } from '../../src/components';
 import { colors, spacing, borderRadius, typography } from '../../src/constants/theme';
 import { SNAP_CONFIGS, DifficultyLevel } from '../../src/constants/gameConfig';
 import { getDifficulty } from '../../src/utils/difficulty';
+import {
+  createSessionDifficultyState,
+  updateSessionDifficulty,
+  getSnapConfigForSession,
+  SessionDifficultyState,
+} from '../../src/utils/sessionDifficulty';
 
 const { width, height } = Dimensions.get('window');
 const PLAY_AREA_HEIGHT = height * 0.6;
@@ -47,12 +53,14 @@ export default function SnapRoundScreen() {
   const spawnIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const targetIdRef = useRef(0);
   const isGameActiveRef = useRef(true);
+  const sessionDifficultyRef = useRef<SessionDifficultyState | null>(null);
 
   useEffect(() => {
     const init = async () => {
       const diff = await getDifficulty();
       setDifficulty(diff);
       setConfig(SNAP_CONFIGS[diff]);
+      sessionDifficultyRef.current = createSessionDifficultyState(diff, 1, Math.min(diff + 2, 5) as DifficultyLevel);
     };
     init();
   }, []);
@@ -125,6 +133,14 @@ export default function SnapRoundScreen() {
   }, []);
 
   const handleTargetPress = useCallback((target: Target) => {
+    const isCorrect = !target.isDistractor;
+    
+    if (sessionDifficultyRef.current) {
+      sessionDifficultyRef.current = updateSessionDifficulty(sessionDifficultyRef.current, isCorrect);
+      const newConfig = getSnapConfigForSession(difficulty, sessionDifficultyRef.current.currentLevel);
+      setConfig(newConfig);
+    }
+    
     if (target.isDistractor) {
       penalize(config.penaltyPerDistractor);
       setMisses(m => m + 1);
@@ -136,7 +152,7 @@ export default function SnapRoundScreen() {
     }
     
     removeTarget(target.id);
-  }, [config, addScore, penalize, removeTarget]);
+  }, [config, difficulty, addScore, penalize, removeTarget]);
 
   useEffect(() => {
     if (!config) return;

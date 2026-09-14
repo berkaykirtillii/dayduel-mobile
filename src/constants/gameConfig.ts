@@ -28,6 +28,7 @@ export interface LockConfig {
   pointsPerCorrect: number;
   penaltyPerMiss: number;
   penaltyPerWrong: number;
+  targetRatio: number;
 }
 
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5;
@@ -120,49 +121,54 @@ export const SNAP_CONFIGS: Record<DifficultyLevel, SnapConfig> = {
 
 export const LOCK_CONFIGS: Record<DifficultyLevel, LockConfig> = {
   1: {
-    spawnIntervalMs: 1400,
-    fallDurationMs: 4000,
+    spawnIntervalMs: 1000,
+    fallDurationMs: 3800,
     distractorSimilarity: 0.3,
     reactionWindowMs: 800,
     pointsPerCorrect: 75,
     penaltyPerMiss: 25,
     penaltyPerWrong: 50,
+    targetRatio: 0.55,
   },
   2: {
-    spawnIntervalMs: 1200,
-    fallDurationMs: 3500,
+    spawnIntervalMs: 850,
+    fallDurationMs: 3400,
     distractorSimilarity: 0.4,
     reactionWindowMs: 700,
     pointsPerCorrect: 90,
     penaltyPerMiss: 30,
     penaltyPerWrong: 60,
+    targetRatio: 0.50,
   },
   3: {
-    spawnIntervalMs: 1000,
+    spawnIntervalMs: 750,
     fallDurationMs: 3000,
     distractorSimilarity: 0.5,
     reactionWindowMs: 600,
     pointsPerCorrect: 100,
     penaltyPerMiss: 35,
     penaltyPerWrong: 70,
+    targetRatio: 0.45,
   },
   4: {
-    spawnIntervalMs: 850,
+    spawnIntervalMs: 650,
     fallDurationMs: 2700,
-    distractorSimilarity: 0.6,
+    distractorSimilarity: 0.55,
     reactionWindowMs: 500,
     pointsPerCorrect: 120,
     penaltyPerMiss: 40,
     penaltyPerWrong: 80,
+    targetRatio: 0.42,
   },
   5: {
-    spawnIntervalMs: 700,
+    spawnIntervalMs: 550,
     fallDurationMs: 2400,
-    distractorSimilarity: 0.7,
+    distractorSimilarity: 0.6,
     reactionWindowMs: 450,
     pointsPerCorrect: 150,
     penaltyPerMiss: 50,
     penaltyPerWrong: 100,
+    targetRatio: 0.40,
   },
 };
 
