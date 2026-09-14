@@ -1,8 +1,16 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Vibration } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
 import { ROUND_DURATION } from '../constants/gameConfig';
+import {
+  triggerUrgencyFeedback,
+  triggerSuccessFeedback,
+  triggerMissFeedback,
+  triggerStreakFeedback,
+  isStreakMilestone,
+} from '../utils/feedback';
 
 export interface RoundShellProps {
   roundNumber: 1 | 2 | 3;
@@ -30,6 +38,8 @@ export function RoundShell({
   const onTimeUpRef = useRef(onTimeUp);
   const hasEndedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const urgencyPulse = useRef(new Animated.Value(0)).current;
+  const urgencyAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     onTimeUpRef.current = onTimeUp;
@@ -43,7 +53,8 @@ export function RoundShell({
       setTimeLeft(newTime);
 
       if (newTime === 10) {
-        Vibration.vibrate(100);
+        triggerUrgencyFeedback();
+        startUrgencyAnimation();
       }
 
       if (newTime <= 0 && !hasEndedRef.current) {
@@ -52,6 +63,7 @@ export function RoundShell({
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
+        stopUrgencyAnimation();
         onTimeUpRef.current();
       }
     }, 1000);
@@ -61,14 +73,61 @@ export function RoundShell({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      stopUrgencyAnimation();
     };
   }, []);
 
+  const startUrgencyAnimation = useCallback(() => {
+    urgencyAnimationRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(urgencyPulse, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(urgencyPulse, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    urgencyAnimationRef.current.start();
+  }, [urgencyPulse]);
+
+  const stopUrgencyAnimation = useCallback(() => {
+    if (urgencyAnimationRef.current) {
+      urgencyAnimationRef.current.stop();
+      urgencyAnimationRef.current = null;
+    }
+    urgencyPulse.setValue(0);
+  }, [urgencyPulse]);
+
   const progress = timeLeft / ROUND_DURATION;
   const isLowTime = timeLeft <= 10;
+  const vignetteOpacity = urgencyPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.6],
+  });
 
   return (
     <SafeAreaView style={styles.container}>
+      {isLowTime && (
+        <Animated.View
+          style={[styles.urgencyOverlay, { opacity: vignetteOpacity }]}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={['rgba(255, 90, 31, 0.4)', 'transparent', 'transparent', 'rgba(255, 45, 149, 0.4)']}
+            locations={[0, 0.15, 0.85, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.urgencyEdgeTop} />
+          <View style={styles.urgencyEdgeBottom} />
+        </Animated.View>
+      )}
       <View style={styles.header}>
         <View style={styles.roundInfo}>
           <Text style={styles.roundLabel}>ROUND {roundNumber}/3</Text>
@@ -122,10 +181,17 @@ export function useRoundScore(initialScore = 0) {
     const multiplier = 1 + Math.min(combo, 5) * 0.1;
     const finalPoints = Math.round(points * multiplier);
     setScore(prev => prev + finalPoints);
-    setCombo(prev => prev + 1);
+    const newCombo = combo + 1;
+    setCombo(newCombo);
     setFeedback('correct');
     setTimeout(() => setFeedback(null), 200);
-    Vibration.vibrate(50);
+    
+    if (isStreakMilestone(newCombo)) {
+      triggerStreakFeedback();
+    } else {
+      triggerSuccessFeedback();
+    }
+    
     return finalPoints;
   }, [combo]);
 
@@ -134,7 +200,7 @@ export function useRoundScore(initialScore = 0) {
     setCombo(0);
     setFeedback('wrong');
     setTimeout(() => setFeedback(null), 300);
-    Vibration.vibrate([0, 100, 50, 100]);
+    triggerMissFeedback();
   }, []);
 
   const resetCombo = useCallback(() => {
@@ -148,6 +214,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  urgencyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+  },
+  urgencyEdgeTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: colors.orange,
+  },
+  urgencyEdgeBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: colors.magenta,
   },
   header: {
     flexDirection: 'row',
