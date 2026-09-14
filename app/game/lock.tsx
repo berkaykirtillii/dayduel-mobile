@@ -48,8 +48,10 @@ const ShapeComponent = ({
   isTarget: boolean;
 }) => {
   const colorValue = SHAPE_COLORS[color];
-  const borderColor = isTarget ? colorValue : colors.mutedDark;
   const fillColor = isTarget ? colorValue : 'transparent';
+  const borderColor = colorValue;
+  const borderWidth = isTarget ? 3 : 2;
+  const opacity = isTarget ? 1 : 0.5;
 
   switch (shape) {
     case 'circle':
@@ -60,8 +62,10 @@ const ShapeComponent = ({
             height: size,
             borderRadius: size / 2,
             backgroundColor: fillColor,
-            borderWidth: 3,
+            borderWidth,
             borderColor,
+            borderStyle: isTarget ? 'solid' : 'dashed',
+            opacity,
           }}
         />
       );
@@ -73,8 +77,10 @@ const ShapeComponent = ({
             height: size,
             borderRadius: 4,
             backgroundColor: fillColor,
-            borderWidth: 3,
+            borderWidth,
             borderColor,
+            borderStyle: isTarget ? 'solid' : 'dashed',
+            opacity,
           }}
         />
       );
@@ -89,7 +95,8 @@ const ShapeComponent = ({
             borderBottomWidth: size * 0.866,
             borderLeftColor: 'transparent',
             borderRightColor: 'transparent',
-            borderBottomColor: isTarget ? colorValue : borderColor,
+            borderBottomColor: colorValue,
+            opacity,
           }}
         />
       );
@@ -100,9 +107,11 @@ const ShapeComponent = ({
             width: size * 0.7,
             height: size * 0.7,
             backgroundColor: fillColor,
-            borderWidth: 3,
+            borderWidth,
             borderColor,
+            borderStyle: isTarget ? 'solid' : 'dashed',
             transform: [{ rotate: '45deg' }],
+            opacity,
           }}
         />
       );

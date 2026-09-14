@@ -116,18 +116,12 @@ export default function SnapRoundScreen() {
         useNativeDriver: true,
       }).start();
 
+      if (expired && !target.isDistractor) {
+        setMisses(m => m + 1);
+      }
+
       return prev.filter(t => t.id !== id);
     });
-    
-    if (expired) {
-      setTargets(prev => {
-        const target = prev.find(t => t.id === id);
-        if (target && !target.isDistractor) {
-          setMisses(m => m + 1);
-        }
-        return prev.filter(t => t.id !== id);
-      });
-    }
   }, []);
 
   const handleTargetPress = useCallback((target: Target) => {
