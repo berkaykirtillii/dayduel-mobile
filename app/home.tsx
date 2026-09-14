@@ -2,12 +2,12 @@ import { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { OrbButton, StatCard, StreakBadge } from '../src/components';
+import { OrbButton } from '../src/components';
 import { useGameState } from '../src/hooks/useGameState';
 import { colors, typography, spacing, borderRadius } from '../src/constants/theme';
 
 export default function HomeScreen() {
-  const { todayScore, streak, bestScore, checkCanPlay, refresh, duelsToday, isPro } = useGameState();
+  const { todayScore, streak, bestScore, checkCanPlay, refresh, duelsToday, isPro, devUnlimited } = useGameState();
 
   useFocusEffect(
     useCallback(() => {
@@ -28,14 +28,21 @@ export default function HomeScreen() {
     router.push('/profile');
   };
 
-  const canPlayToday = isPro || duelsToday < 1;
+  const canPlayToday = isPro || devUnlimited || duelsToday < 1;
+
+  const handleOrbPress = () => {
+    if (canPlayToday) {
+      handleStartDuel();
+    } else {
+      router.push('/paywall');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.logo}>DAYDUEL</Text>
-          <Text style={styles.tagline}>5-MIN MIND SPRINT</Text>
         </View>
         <TouchableOpacity 
           onPress={handleOpenProfile}
@@ -57,28 +64,28 @@ export default function HomeScreen() {
 
       <View style={styles.orbContainer}>
         <OrbButton 
-          onPress={handleStartDuel} 
-          disabled={!canPlayToday}
-          subtitle={canPlayToday ? 'TAP TO START' : 'COME BACK TOMORROW'}
+          onPress={handleOrbPress} 
+          disabled={false}
+          subtitle={canPlayToday ? 'TAP TO START' : 'TAP TO UNLOCK'}
         />
-        {!canPlayToday && (
-          <TouchableOpacity onPress={() => router.push('/paywall')} style={styles.unlockHint}>
-            <Text style={styles.unlockText}>or unlock unlimited with Pro →</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       <View style={styles.stats}>
-        <View style={styles.statsHeader}>
-          <Text style={styles.statsLabel}>TODAY'S PROGRESS</Text>
-        </View>
         <View style={styles.statRow}>
-          <StatCard label="Score" value={todayScore.toLocaleString()} />
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>TODAY'S SCORE</Text>
+            <Text style={styles.statValue}>{todayScore.toLocaleString()}</Text>
+          </View>
           <View style={styles.statGap} />
-          <StatCard label="Streak" value={`${streak}🔥`} variant={streak > 0 ? 'highlight' : 'default'} />
+          <View style={[styles.statCard, streak > 0 && styles.statCardHighlight]}>
+            <Text style={styles.statLabel}>STREAK</Text>
+            <Text style={[styles.statValue, streak > 0 && styles.statValueHighlight]}>
+              {streak} {streak === 1 ? 'day' : 'days'}
+            </Text>
+          </View>
         </View>
         <View style={styles.bestScoreContainer}>
-          <Text style={styles.bestScoreLabel}>PERSONAL BEST</Text>
+          <Text style={styles.bestScoreLabel}>Best</Text>
           <Text style={styles.bestScoreValue}>{bestScore.toLocaleString()}</Text>
         </View>
       </View>
@@ -94,22 +101,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   headerLeft: {},
   logo: {
     fontSize: typography.sizes.xl,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: 3,
-  },
-  tagline: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    letterSpacing: 2,
-    marginTop: 2,
   },
   profileButton: {
     minWidth: 44,
@@ -128,13 +130,14 @@ const styles = StyleSheet.create({
     borderColor: colors.orange,
   },
   streakIcon: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     marginRight: spacing.xs,
   },
   streakCount: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
-    color: colors.orange,
+    color: colors.text,
   },
   profileBadge: {
     backgroundColor: colors.card,
@@ -154,54 +157,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unlockHint: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  unlockText: {
-    fontSize: typography.sizes.sm,
-    color: colors.magenta,
-  },
   stats: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  statsHeader: {
-    marginBottom: spacing.sm,
-  },
-  statsLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    letterSpacing: 2,
-    fontWeight: '600',
   },
   statRow: {
     flexDirection: 'row',
     marginBottom: spacing.md,
   },
-  statGap: {
-    width: spacing.md,
-  },
-  bestScoreContainer: {
+  statCard: {
+    flex: 1,
     backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  bestScoreLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.muted,
-    letterSpacing: 1,
+  statCardHighlight: {
+    borderColor: colors.orange,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontFamily: typography.fonts.bodySemiBold,
     fontWeight: '600',
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: spacing.xs,
+  },
+  statValue: {
+    fontSize: typography.sizes.xl,
+    fontFamily: typography.fonts.display,
+    fontWeight: typography.display.fontWeight,
+    color: colors.text,
+    letterSpacing: typography.display.letterSpacing,
+  },
+  statValueHighlight: {
+    color: colors.text,
+  },
+  statGap: {
+    width: spacing.md,
+  },
+  bestScoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  bestScoreLabel: {
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fonts.bodyMedium,
+    color: colors.muted,
   },
   bestScoreValue: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.sm,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
   },

@@ -21,7 +21,7 @@ import {
   ShapeColor,
   LockRule,
 } from '../../src/constants/gameConfig';
-import { getDifficulty, adjustDifficultyAfterGame } from '../../src/utils/difficulty';
+import { getDifficulty } from '../../src/utils/difficulty';
 
 const { width, height } = Dimensions.get('window');
 const PLAY_AREA_HEIGHT = height * 0.55;
@@ -249,27 +249,14 @@ export default function LockRoundScreen() {
     };
   }, [config, rule, spawnShape]);
 
-  const handleTimeUp = useCallback(async () => {
+  const handleTimeUp = useCallback(() => {
     isGameActiveRef.current = false;
     if (spawnIntervalRef.current) {
       clearInterval(spawnIntervalRef.current);
     }
-    
+
     const finalScore = previousScore + score;
-    
-    const echoAcc = 0.7;
-    const snapAcc = 0.7;
-    const lockAcc = correct + wrong + missed > 0 
-      ? correct / (correct + wrong + missed) 
-      : 0.5;
-    
-    await adjustDifficultyAfterGame({
-      echoAccuracy: echoAcc,
-      snapAccuracy: snapAcc,
-      lockAccuracy: lockAcc,
-      totalScore: finalScore,
-    });
-    
+
     router.replace({
       pathname: '/result',
       params: {
@@ -280,7 +267,7 @@ export default function LockRoundScreen() {
         lockScore: score.toString(),
       },
     });
-  }, [previousScore, score, echoScore, snapScore, correct, wrong, missed]);
+  }, [previousScore, score, echoScore, snapScore, duelId]);
 
   const accuracy = correct + wrong > 0 ? Math.round((correct / (correct + wrong)) * 100) : 100;
 

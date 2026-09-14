@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: typography.fonts.bodySemiBold,
+    fontWeight: '600',
     color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
@@ -45,6 +46,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: typography.sizes.xl,
+    fontFamily: typography.fonts.display,
     fontWeight: typography.display.fontWeight,
     color: colors.text,
     letterSpacing: typography.display.letterSpacing,

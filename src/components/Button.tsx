@@ -77,26 +77,27 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.full,
     overflow: 'hidden',
   },
   gradient: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl + 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.orange,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+    borderRadius: borderRadius.full,
   },
   secondary: {
     backgroundColor: colors.card,
     borderWidth: 2,
     borderColor: colors.cardBorder,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xl + 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -112,12 +113,14 @@ const styles = StyleSheet.create({
   },
   text: {
     color: colors.text,
+    fontFamily: typography.fonts.display,
     fontWeight: '800',
     letterSpacing: 2,
   },
   textGhost: {
     color: colors.muted,
-    fontWeight: '600',
+    fontFamily: typography.fonts.bodyMedium,
+    fontWeight: '500',
     letterSpacing: 0,
   },
   size_sm: {},
@@ -130,6 +133,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
   },
   text_lg: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.lg + 2,
   },
 });
